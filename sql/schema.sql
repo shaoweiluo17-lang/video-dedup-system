@@ -1,0 +1,37 @@
+-- MySQL DDL for video dedup system
+CREATE DATABASE IF NOT EXISTS video_dedup DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE video_dedup;
+
+CREATE TABLE IF NOT EXISTS videos (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(255) NOT NULL DEFAULT '',
+  source_url VARCHAR(1000) NOT NULL DEFAULT '',
+  page_url VARCHAR(1000) NOT NULL DEFAULT '',
+  video_hash VARCHAR(64) NOT NULL DEFAULT '',
+  file_size BIGINT NOT NULL DEFAULT 0,
+  duration_sec INT NOT NULL DEFAULT 0,
+  width INT NOT NULL DEFAULT 0,
+  height INT NOT NULL DEFAULT 0,
+  format VARCHAR(50) NOT NULL DEFAULT '',
+  cover_path VARCHAR(500) NOT NULL DEFAULT '',
+  local_path VARCHAR(500) NOT NULL DEFAULT '',
+  tags VARCHAR(500) NOT NULL DEFAULT '',
+  ext_json JSON NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_video_hash (video_hash),
+  KEY idx_title (title),
+  KEY idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS download_history (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  video_hash VARCHAR(64) NOT NULL DEFAULT '',
+  source_url VARCHAR(1000) NOT NULL DEFAULT '',
+  local_path VARCHAR(500) NOT NULL DEFAULT '',
+  status VARCHAR(50) NOT NULL DEFAULT 'queued',
+  task_id VARCHAR(128) NOT NULL DEFAULT '',
+  message VARCHAR(500) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_video_hash_created_at (video_hash, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

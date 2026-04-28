@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>视频去重 — 设置</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+      background: #f5f5f5;
+      color: #333;
+      padding: 24px;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+      color: #667eea;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #555;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group:last-child { margin-bottom: 0; }
+    label {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    input[type="text"],
+    input[type="password"],
+    input[type="number"] {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      transition: border-color 0.15s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+    }
+    .hint {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 3px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-primary { background: #667eea; color: #fff; }
+    .btn-ghost { background: #e5e7eb; color: #555; }
+    .btn-ghost-sm { background: transparent; color: #667eea; border: none; cursor: pointer; font-size: 12px; }
+    .btn-ghost-sm:hover { text-decoration: underline; }
+    .status {
+      margin-left: 12px;
+      font-size: 12px;
+      color: #22c55e;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .status.show { opacity: 1; }
+    .test-result {
+      font-size: 12px;
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 6px;
+    }
+    .test-result.ok { background: #dcfce7; color: #166534; }
+    .test-result.fail { background: #fef2f2; color: #991b1b; }
+  </style>
+</head>
+<body>
+
+  <h1>⚙️ 视频去重下载 — 设置</h1>
+
+  <!-- API 设置 -->
+  <div class="card">
+    <div class="card-title">🔗 API 服务器</div>
+    <div class="form-group">
+      <label>API 地址</label>
+      <input type="text" id="apiUrl" placeholder="http://127.0.0.1:18080" />
+    </div>
+    <div class="form-group">
+      <label>API Key</label>
+      <input type="password" id="apiKey" placeholder="输入你的 API Key" />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="btnTestApi">🔍 测试连接</button>
+      <span class="status" id="apiStatus">已保存</span>
+    </div>
+    <div id="testResult" class="hidden"></div>
+  </div>
+
+  <!-- 下载设置 -->
+  <div class="card">
+    <div class="card-title">📥 下载设置</div>
+    <div class="form-group">
+      <label>下载文件夹</label>
+      <input type="text" id="downloadFolder" placeholder="D:/Downloads/Movies" />
+      <div class="hint">所有视频下载到此目录</div>
+    </div>
+    <div class="form-group">
+      <label>默认后缀</label>
+      <input type="text" id="downloadSuffix" placeholder="例如: _2024" />
+      <div class="hint">文件名附加后缀，如 "电影名_2024.mp4"</div>
+    </div>
+  </div>
+
+  <!-- 行为设置 -->
+  <div class="card">
+    <div class="card-title">🎯 行为设置</div>
+    <div class="form-group">
+      <label>
+        <input type="checkbox" id="autoCheck" />
+        打开视频页面时自动去重检查
+      </label>
+    </div>
+  </div>
+
+  <!-- 保存 -->
+  <div class="card">
+    <div class="card-title">🎯 提取规则管理</div>
+    <div class="hint" style="margin-bottom:10px;">
+      规则引擎按 URL 正则匹配，命中后用 CSS 选择器提取视频信息。
+      预置 B站/YouTube/抖音/通用规则，可修改或新增。
+    </div>
+    <div id="rulesList" style="max-height:400px;overflow-y:auto;"></div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn btn-ghost" id="btnAddRule">➕ 新增规则</button>
+      <button class="btn btn-ghost" id="btnExportRules">📤 导出</button>
+      <button class="btn btn-ghost" id="btnImportRules">📥 导入</button>
+      <input type="file" id="importFileInput" accept=".json" style="display:none;" />
+    </div>
+    <div id="ruleEditor" class="hidden" style="margin-top:12px;border:1px solid #ddd;border-radius:8px;padding:12px;background:#fafafa;">
+      <div class="form-group">
+        <label>规则 ID</label>
+        <input type="text" id="ruleId" placeholder="例如 bilibili_custom" />
+      </div>
+      <div class="form-group">
+        <label>名称</label>
+        <input type="text" id="ruleName" placeholder="例如 B站增强版" />
+      </div>
+      <div class="form-group">
+        <label>URL 正则</label>
+        <input type="text" id="ruleUrlPattern" placeholder="例如 bilibili\\.com/video/" />
+      </div>
+      <div class="form-group">
+        <label>完整规则 JSON（可直接粘贴修改）</label>
+        <textarea id="ruleJson" rows="10" style="width:100%;font-family:monospace;font-size:11px;" placeholder='{"extractors":{"title":{"type":"css","selector":"h1"}}}'></textarea>
+        <div class="hint">
+          字段 extractors 支持: title, duration_secs, duration_str, category。<br/>
+          type 支持: css(默认), eval, regex, constant。<br/>
+          后处理: trim, parseInt, parseFloat, extractNumber, iso8601ToSeconds, iso8601ToString, timeStrToDurationStr, removeSiteSuffix
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnSaveRule">💾 保存规则</button>
+        <button class="btn btn-ghost" id="btnCancelRule">取消</button>
+        <button class="btn btn-ghost" id="btnDeleteRule" style="display:none;">🗑️ 删除规则</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保存 -->
+  <div class="btn-row">
+    <button class="btn btn-primary" id="btnSave">💾 保存设置</button>
+    <button class="btn btn-ghost" id="btnReset">↩️ 恢复默认</button>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
