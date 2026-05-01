@@ -142,6 +142,7 @@ const BUILTIN_RULES = [
         type: 'eval',
         code: "(()=>{const el=document.querySelector('.video-holder img[src*=\"preview\"], .fp-poster img');if(el){let v=el.getAttribute('src')||'';return v.startsWith('//')?'https:'+v:v;}const meta=document.querySelector('meta[property=\"og:image\"]');if(meta){let v=meta.getAttribute('content')||'';return v.startsWith('//')?'https:'+v:v;}return ''})()",
       },
+    },
   },
 ];
 
