@@ -213,11 +213,16 @@ class RuleEngine {
       const stored = await chrome.storage.sync.get('extractorRules');
       if (stored.extractorRules) {
         const userRules = JSON.parse(stored.extractorRules);
-        // 用户规则覆盖同 id 的预置规则，追加新规则
         for (const ur of userRules) {
           const idx = this.rules.findIndex(r => r.id === ur.id);
           if (idx >= 0) {
-            this.rules[idx] = { ...this.rules[idx], ...ur };
+            // 深度合并：extractors 按字段合并，其他属性浅覆盖
+            const base = this.rules[idx];
+            this.rules[idx] = {
+              ...base,
+              ...ur,
+              extractors: { ...(base.extractors || {}), ...(ur.extractors || {}) },
+            };
           } else {
             this.rules.push(ur);
           }
