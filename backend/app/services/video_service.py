@@ -169,6 +169,7 @@ def create_video(db: Session, payload: VideoCreateRequest) -> Video:
     db.flush()
 
     # 下载预览图
+    logger.info("create_video id=%d preview_url=%r", video.id, payload.preview_url or '(empty)')
     if payload.preview_url:
         preview_path = _download_preview(payload.preview_url, video.id)
         if preview_path:
