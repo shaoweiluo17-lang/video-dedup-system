@@ -66,6 +66,7 @@ def _capture_first_second(video_path: str, screenshot_path: str) -> tuple[bool, 
             capture_output=True,
             text=True,
             timeout=FFMPEG_TIMEOUT,
+            encoding='utf-8', errors='replace',
         )
         return True, ''
     except subprocess.CalledProcessError as e:

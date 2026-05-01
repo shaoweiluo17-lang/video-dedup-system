@@ -21,6 +21,7 @@ def _ffprobe_duration(filepath: str) -> tuple[int, str]:
                 '-show_format', filepath,
             ],
             capture_output=True, text=True, timeout=30,
+            encoding='utf-8', errors='replace',
         )
         if result.returncode != 0:
             return 0, ''
