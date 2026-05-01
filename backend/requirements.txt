@@ -8,3 +8,5 @@ redis==5.1.1
 python-multipart==0.0.12
 pypinyin==0.53.0
 APScheduler==3.10.4
+requests==2.32.3
+beautifulsoup4==4.12.3
