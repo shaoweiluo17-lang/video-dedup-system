@@ -177,18 +177,25 @@ def import_videos(payload: VideoImportRequest, db: Session = Depends(get_db)):
     success_count = 0
     duplicate_count = 0
     fail_count = 0
+    new_ids = []
 
     for item in payload.items:
         try:
-            ok, _ = import_video_item(db, item)
+            ok, video = import_video_item(db, item)
             if ok:
                 success_count += 1
+                new_ids.append(video.id)
             else:
                 duplicate_count += 1
         except Exception:
             fail_count += 1
 
-    get_redis_client().delete('video:stats')
+    # 新导入的视频推入截图队列
+    redis_client = get_redis_client()
+    if new_ids:
+        redis_client.lpush('video:pending_screenshot', *new_ids)
+
+    redis_client.delete('video:stats')
     return VideoImportResponse(
         success_count=success_count,
         duplicate_count=duplicate_count,
