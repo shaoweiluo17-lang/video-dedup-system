@@ -100,6 +100,8 @@ def check_duplicate(
         result = VideoCheckResponse(exists=True, level='weak', matches=weak_matches)
     else:
         result = VideoCheckResponse(exists=False, level='none', matches=[])
+        # 不缓存"无重复"结果，避免添加后缓存未失效导致重复添加
+        return result
 
     redis_client.setex(cache_key, settings.CHECK_CACHE_TTL_SECONDS, result.model_dump_json())
     return result
