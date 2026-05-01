@@ -140,7 +140,7 @@ const BUILTIN_RULES = [
       },
       preview_url: {
         type: 'eval',
-        code: "(()=>{const tryEl=(sel,attr)=>{const el=document.querySelector(sel);if(!el)return null;let v=el.getAttribute(attr)||'';return v.startsWith('//')?'https:'+v:v;};return tryEl('meta[property=\"og:image\"]','content')||tryEl('meta[name=\"twitter:image\"]','content')||tryEl('.video-holder img[src*=\"preview\"]','src')||tryEl('.fp-poster img','src')||tryEl('link[rel=\"image_src\"]','href')||tryEl('video[poster]','poster')||(()=>{const imgs=document.querySelectorAll('.video-holder img');for(const img of imgs){const s=img.getAttribute('src')||'';if(s&&/\\.(jpg|jpeg|png|webp)/i.test(s))return s.startsWith('//')?'https:'+s:s;}return '';})()})()",
+        code: "(()=>{const tryEl=(sel,attr)=>{const el=document.querySelector(sel);if(el){let v=el.getAttribute(attr)||'';if(v)return v.startsWith('//')?'https:'+v:v;}return null;};let r=tryEl('meta[property=\"og:image\"]','content')||tryEl('meta[name=\"twitter:image\"]','content')||tryEl('.video-holder img[src*=\"preview\"]','src')||tryEl('.fp-poster img','src')||tryEl('link[rel=\"image_src\"]','href')||tryEl('video[poster]','poster');if(r)return r;const imgs=document.querySelectorAll('.video-holder img');for(const img of imgs){const s=img.getAttribute('src')||'';if(s&&/\\.(jpg|jpeg|png|webp)/i.test(s))return s.startsWith('//')?'https:'+s:s;}const scripts=document.querySelectorAll('script');for(const s of scripts){const t=s.textContent||'';const m=t.match(/preview_url\\s*:\\s*['\"]([^'\"]+)['\"]/);if(m)return m[1].startsWith('//')?'https:'+m[1]:m[1];}return ''})()",
       },
     },
   },
