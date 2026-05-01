@@ -48,15 +48,16 @@ def check_duplicate(
     db: Session,
     redis_client: Redis,
     title: str,
-    duration_secs: int,
-    size_mb: Decimal,
+    url: str = '',
+    duration_secs: int = 0,
+    size_mb: Decimal = Decimal('0'),
     source_site: str = '',
 ) -> VideoCheckResponse:
     normalized = normalize_title(title)
     pinyin = title_to_pinyin(title)
     final_source_site = source_site or ''
 
-    cache_key_raw = f"{normalized}|{duration_secs}|{size_mb}|{final_source_site}"
+    cache_key_raw = f"{normalized}|{url}|{duration_secs}|{size_mb}|{final_source_site}"
     cache_key = f"video:check:{hash_text(cache_key_raw)}"
     cached = redis_client.get(cache_key)
     if cached:
@@ -72,6 +73,7 @@ def check_duplicate(
             Video.title_normalized == normalized,
             Video.title_pinyin == pinyin,
             Video.title.like(f"%{title}%"),
+            Video.url == url if url else False,
         )
     ).limit(30).all()
 
@@ -85,7 +87,10 @@ def check_duplicate(
         v_size = _decimal_to_float(v.size_mb)
         size_diff_pct = abs(v_size - target_size) / target_size if target_size > 0 else 0
 
-        if v.title_normalized == normalized and dur_diff <= 3:
+        # URL 完全相同 = 绝对重复 (score 1.0)
+        if url and v.url and v.url == url:
+            strong_matches.append(_to_check_item(v, 1.0))
+        elif v.title_normalized == normalized and dur_diff <= 3:
             strong_matches.append(_to_check_item(v, 0.98))
         elif v.title_pinyin == pinyin and dur_diff <= 5 and size_diff_pct <= 0.05:
             medium_matches.append(_to_check_item(v, 0.85))

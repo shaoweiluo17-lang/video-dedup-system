@@ -82,10 +82,11 @@ def check_video_exists(
     duration_secs: int = Query(default=0, ge=0),
     size_mb: Decimal = Query(default=Decimal('0')),
     source_site: str = Query(default=''),
+    url: str = Query(default=''),
     db: Session = Depends(get_db),
 ):
     redis_client = get_redis_client()
-    return check_duplicate(db, redis_client, title, duration_secs, size_mb, source_site)
+    return check_duplicate(db, redis_client, title, url, duration_secs, size_mb, source_site)
 
 
 @router.post('', response_model=VideoOut)

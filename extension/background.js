@@ -57,6 +57,7 @@ async function handleMessage(msg, sender) {
         size_mb: String(msg.size_mb || 0),
         source_site: msg.source_site || '',
       });
+      if (msg.url) params.set('url', msg.url);
       return apiCall(`/api/v1/videos/check?${params.toString()}`);
     }
 

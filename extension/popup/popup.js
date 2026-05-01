@@ -138,6 +138,7 @@ async function handleCheck() {
   try {
     const result = await chrome.runtime.sendMessage({
       action: 'checkDuplicate',
+      url: currentVideo.url,
       title: currentVideo.title,
       duration_secs: currentVideo.duration_secs,
       size_mb: currentVideo.size_mb,
