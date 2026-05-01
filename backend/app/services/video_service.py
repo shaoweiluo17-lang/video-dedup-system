@@ -115,25 +115,38 @@ def _download_preview(preview_url: str, video_id: int) -> str:
         url = preview_url.strip()
         if url.startswith('//'):
             url = 'https:' + url
-        resp = requests.get(url, timeout=30)
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': url,
+        }
+        resp = requests.get(url, headers=headers, timeout=30)
         resp.raise_for_status()
 
         base_dir = Path(settings.SCREENSHOT_DIR)
         base_dir.mkdir(parents=True, exist_ok=True)
 
-        # 从 URL 推断扩展名，默认 .jpg
+        # 从 URL 或 Content-Type 推断扩展名
         parsed = urlparse(url)
-        ext = Path(parsed.path).suffix or '.jpg'
-        if ext.lower() not in ('.jpg', '.jpeg', '.png', '.webp'):
-            ext = '.jpg'
+        ext = Path(parsed.path).suffix
+        if not ext or ext.lower() not in ('.jpg', '.jpeg', '.png', '.webp'):
+            ct = resp.headers.get('Content-Type', '')
+            if 'png' in ct:
+                ext = '.png'
+            elif 'webp' in ct:
+                ext = '.webp'
+            else:
+                ext = '.jpg'
 
         dest = base_dir / f"video_{video_id}_preview{ext}"
         dest.write_bytes(resp.content)
-        logger.info("preview downloaded: %s → %s", url, dest)
+        logger.info("preview downloaded: %s → %s (status=%d, size=%d)", url, dest, resp.status_code, len(resp.content))
         return str(dest)
-    except Exception as exc:
+    except requests.RequestException as exc:
         logger.warning("preview download failed for %s: %s", preview_url, exc)
-        return ''
+    except Exception as exc:
+        logger.warning("preview download unexpected error for %s: %s", preview_url, exc)
+    return ''
 
 
 def create_video(db: Session, payload: VideoCreateRequest) -> Video:
