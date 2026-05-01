@@ -103,8 +103,8 @@ const BUILTIN_RULES = [
         postProcess: ['parseInt'],
       },
       duration_str: {
-        type: 'eval',
-        code: '(()=>{const d=parseInt(document.querySelector("meta[property=\\"video:duration\\"]")?.content||0);const m=Math.floor(d/60);return m+":"+String(d%60).padStart(2,"0")})()',
+        type: 'function',
+        name: 'douyinDurationStr',
       },
     },
   },
@@ -122,8 +122,8 @@ const BUILTIN_RULES = [
         postProcess: ['trim', 'removeSiteSuffix'],
       },
       duration_secs: {
-        type: 'eval',
-        code: '(()=>{const t=document.querySelector(".fp-duration");if(t){const p=t.textContent.trim().split(":");if(p.length===2)return parseInt(p[0],10)*60+parseInt(p[1],10);if(p.length===3)return parseInt(p[0],10)*3600+parseInt(p[1],10)*60+parseInt(p[2],10);}const v=document.querySelector("video");if(v&&v.duration>0)return Math.round(v.duration);return 0})()',
+        type: 'function',
+        name: 'genericDurationSecs',
       },
       duration_str: {
         type: 'css',
@@ -139,16 +139,55 @@ const BUILTIN_RULES = [
         postProcess: ['trim'],
       },
       preview_url: {
-        type: 'eval',
-        code: "(()=>{function g(sel,attr){try{var e=document.querySelector(sel);if(e){var v=e.getAttribute(attr)||'';if(v)return v.indexOf('//')===0?'https:'+v:v;}}catch(_){}return'';}return g('meta[property=\"og:image\"]','content')||g('.video-holder img[src*=\"preview\"]','src')||g('.fp-poster img','src')})()",
+        type: 'function',
+        name: 'genericPreviewUrl',
       },
     },
   },
 ];
 
 // ============================================================
-// 后处理函数
+// CSP-safe 提取函数（替代 eval，绕过页面的 unsafe-eval 限制）
 // ============================================================
+const EXTRACT_FUNCTIONS = {
+
+  /** 抖音 duration_str */
+  douyinDurationStr() {
+    const d = parseInt(document.querySelector('meta[property="video:duration"]')?.content || 0);
+    const m = Math.floor(d / 60);
+    return m + ':' + String(d % 60).padStart(2, '0');
+  },
+
+  /** 通用 duration_secs — fp-duration 优先 */
+  genericDurationSecs() {
+    const t = document.querySelector('.fp-duration');
+    if (t) {
+      const p = t.textContent.trim().split(':');
+      if (p.length === 2) return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+      if (p.length === 3) return parseInt(p[0], 10) * 3600 + parseInt(p[1], 10) * 60 + parseInt(p[2], 10);
+    }
+    const v = document.querySelector('video');
+    if (v && v.duration > 0) return Math.round(v.duration);
+    return 0;
+  },
+
+  /** 通用 preview_url — og:image 优先 */
+  genericPreviewUrl() {
+    function g(sel, attr) {
+      try {
+        const e = document.querySelector(sel);
+        if (e) {
+          const v = e.getAttribute(attr) || '';
+          if (v) return v.indexOf('//') === 0 ? 'https:' + v : v;
+        }
+      } catch (_) { /* ignore */ }
+      return '';
+    }
+    return g('meta[property="og:image"]', 'content')
+        || g('.video-holder img[src*="preview"]', 'src')
+        || g('.fp-poster img', 'src');
+  },
+};
 const POST_PROCESSORS = {
 
   trim(v) { return (v || '').trim(); },
@@ -250,7 +289,16 @@ class RuleEngine {
   extractField(extractor) {
     if (!extractor) return null;
 
-    // type: eval
+    // type: function (CSP-safe 替代 eval)
+    if (extractor.type === 'function') {
+      const fn = EXTRACT_FUNCTIONS[extractor.name];
+      if (fn) {
+        try { return fn(); } catch (e) { console.warn('extractField function error:', e); return null; }
+      }
+      return null;
+    }
+
+    // type: eval (保留兼容，但会被 CSP 拦截)
     if (extractor.type === 'eval') {
       try {
         // eslint-disable-next-line no-eval
