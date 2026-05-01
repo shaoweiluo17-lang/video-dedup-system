@@ -122,10 +122,12 @@
   <!-- 视频信息 -->
   <div class="section" id="videoInfo">
     <div class="section-title">📄 当前页面视频</div>
-    <div id="videoInfoContent">
+    <div id="videoInfoContent" class="hidden">
       <div class="info-row"><span class="info-label">标题</span><span class="info-value" id="vTitle">-</span></div>
       <div class="info-row"><span class="info-label">时长</span><span class="info-value" id="vDuration">-</span></div>
       <div class="info-row"><span class="info-label">来源</span><span class="info-value" id="vSource">-</span></div>
+      <div class="info-row" style="margin-top:8px;"><span class="info-label" style="line-height:24px;">📁 下载路径</span><input type="text" id="vDownloadPath" placeholder="e.g. D:\downloads\video.mp4" style="flex:1;padding:3px 6px;font-size:11px;border:1px solid #ddd;border-radius:4px;" /></div>
+      <div class="info-row"><span class="info-label" style="line-height:24px;">📦 大小(MB)</span><input type="number" id="vSizeMb" placeholder="自动检测" step="0.1" min="0" style="flex:1;padding:3px 6px;font-size:11px;border:1px solid #ddd;border-radius:4px;" /></div>
     </div>
     <div id="videoInfoNone" class="status-bar hidden">未检测到视频信息</div>
   </div>

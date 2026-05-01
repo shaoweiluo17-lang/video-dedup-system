@@ -11,6 +11,8 @@ const els = {
   vTitle: $('#vTitle'),
   vDuration: $('#vDuration'),
   vSource: $('#vSource'),
+  vDownloadPath: $('#vDownloadPath'),
+  vSizeMb: $('#vSizeMb'),
   videoInfoNone: $('#videoInfoNone'),
   videoInfoContent: $('#videoInfoContent'),
   btnCheck: $('#btnCheck'),
@@ -26,6 +28,26 @@ const els = {
 // ----- 状态 -----
 let currentVideo = null;
 let lastCheckResult = null;
+
+// ==================== 文件大小自动检测 ====================
+async function detectFileSize() {
+  const path = (els.vDownloadPath.value || '').trim();
+  if (!path) { els.vSizeMb.placeholder = '自动检测'; return; }
+  els.vSizeMb.placeholder = '检测中...';
+  try {
+    const r = await fetch(`http://127.0.0.1:18080/api/v1/utils/file-info?path=${encodeURIComponent(path)}`);
+    const data = await r.json();
+    if (data.exists) {
+      els.vSizeMb.value = data.size_mb;
+      els.vSizeMb.placeholder = `✅ ${data.size_mb} MB`;
+    } else {
+      els.vSizeMb.value = '';
+      els.vSizeMb.placeholder = '❌ 文件不存在';
+    }
+  } catch (_) {
+    els.vSizeMb.placeholder = '⚠ 无法连接服务器';
+  }
+}
 
 // ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -65,6 +87,11 @@ function renderVideoInfo(info) {
     ? `${info.duration_str} (${info.duration_secs}秒)`
     : '未知';
   els.vSource.textContent = info.source_site || '未知';
+  els.vDownloadPath.value = '';
+  els.vSizeMb.value = '';
+  els.vSizeMb.placeholder = '自动检测';
+  els.resultSection.classList.add('hidden');
+  els.btnAdd.classList.add('hidden');
 
   // 显示预览图
   const existingImg = els.videoInfoContent.querySelector('.preview-thumb');
@@ -95,6 +122,8 @@ function bindEvents() {
     els.resultSection.classList.add('hidden');
     els.btnAdd.classList.add('hidden');
   });
+  els.vDownloadPath.addEventListener('blur', detectFileSize);
+  els.vDownloadPath.addEventListener('change', detectFileSize);
 }
 
 async function handleCheck() {
@@ -197,10 +226,11 @@ async function handleAdd() {
       title: currentVideo.title,
       duration_secs: currentVideo.duration_secs,
       duration_str: currentVideo.duration_str,
-      size_mb: currentVideo.size_mb,
+      size_mb: parseFloat(els.vSizeMb.value) || 0,
       category: currentVideo.category,
       source_site: currentVideo.source_site,
       preview_url: currentVideo.preview_url || '',
+      download_path: (els.vDownloadPath.value || '').trim(),
     });
 
     if (result.error) throw new Error(result.error);
