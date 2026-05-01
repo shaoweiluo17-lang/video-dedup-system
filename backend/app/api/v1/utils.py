@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Query
 
-router = APIRouter()
+router = APIRouter(prefix='/api/v1/utils', tags=['utils'])
 
 VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.ts', '.mpg', '.mpeg', '.3gp'}
 

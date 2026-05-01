@@ -6,5 +6,5 @@ from app.api.v1.utils import router as utils_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
-api_router.include_router(utils_router, prefix='/utils')
+api_router.include_router(utils_router)
 api_router.include_router(videos_router)
