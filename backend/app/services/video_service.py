@@ -37,6 +37,7 @@ def _to_check_item(video: Video, score: float) -> CheckResponseItem:
         duration_secs=video.duration_secs,
         size_mb=Decimal(str(video.size_mb or 0)),
         download_path=video.download_path,
+        preview_path=video.preview_path or '',
         screenshot_path=video.screenshot_path or '',
         source_site=video.source_site,
         score=round(score, 2),
@@ -153,11 +154,10 @@ def create_video(db: Session, payload: VideoCreateRequest) -> Video:
     db.flush()
 
     # 下载预览图
-    screenshot_path = ''
     if payload.preview_url:
-        screenshot_path = _download_preview(payload.preview_url, video.id)
-        if screenshot_path:
-            video.screenshot_path = screenshot_path
+        preview_path = _download_preview(payload.preview_url, video.id)
+        if preview_path:
+            video.preview_path = preview_path
 
     history = DownloadHistory(
         video_id=video.id,

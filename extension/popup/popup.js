@@ -173,7 +173,8 @@ function renderResult(result) {
         <div style="color:#888;">
           时长: ${m.duration_secs}s | 大小: ${m.size_mb}MB | 路径: ${escapeHtml(m.download_path || '-')}
         </div>
-        ${m.screenshot_path ? `<div style="font-size:11px;color:#666;">🖼️ 预览: ${escapeHtml(m.screenshot_path.split('/').pop() || m.screenshot_path)}</div>` : ''}
+        ${m.preview_path ? `<div style="font-size:11px;color:#666;">🌐 网页预览: ${escapeHtml(m.preview_path.split('/').pop() || m.preview_path)}</div>` : ''}
+        ${m.screenshot_path ? `<div style="font-size:11px;color:#666;">🎬 视频截图: ${escapeHtml(m.screenshot_path.split('/').pop() || m.screenshot_path)}</div>` : ''}
         <div style="font-size:10px;color:#aaa;">相似度: ${(m.score * 100).toFixed(0)}%</div>
       </div>`
     )

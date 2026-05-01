@@ -31,6 +31,7 @@ class Video(Base):
     source_site: Mapped[str] = mapped_column(String(100), default='')
     download_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     download_path: Mapped[str] = mapped_column(String(1024), default='')
+    preview_path: Mapped[str] = mapped_column(String(512), default='')
     screenshot_path: Mapped[str] = mapped_column(String(512), default='')
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
