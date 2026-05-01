@@ -1,8 +1,13 @@
 import json
+import logging
+import os
 from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
+import requests
 from redis import Redis
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -18,6 +23,8 @@ from app.schemas.video import (
 )
 from app.utils.text import normalize_title, title_to_pinyin, parse_source_site, hash_text
 
+logger = logging.getLogger(__name__)
+
 
 def _decimal_to_float(v: Decimal | float | int) -> float:
     return float(v or 0)
@@ -30,6 +37,7 @@ def _to_check_item(video: Video, score: float) -> CheckResponseItem:
         duration_secs=video.duration_secs,
         size_mb=Decimal(str(video.size_mb or 0)),
         download_path=video.download_path,
+        screenshot_path=video.screenshot_path or '',
         source_site=video.source_site,
         score=round(score, 2),
     )
@@ -96,6 +104,35 @@ def check_duplicate(
     return result
 
 
+def _download_preview(preview_url: str, video_id: int) -> str:
+    """下载 preview.jpg 并保存到截图目录，返回本地路径"""
+    if not preview_url:
+        return ''
+    try:
+        url = preview_url.strip()
+        if url.startswith('//'):
+            url = 'https:' + url
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+
+        base_dir = Path(settings.SCREENSHOT_DIR)
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        # 从 URL 推断扩展名，默认 .jpg
+        parsed = urlparse(url)
+        ext = Path(parsed.path).suffix or '.jpg'
+        if ext.lower() not in ('.jpg', '.jpeg', '.png', '.webp'):
+            ext = '.jpg'
+
+        dest = base_dir / f"video_{video_id}_preview{ext}"
+        dest.write_bytes(resp.content)
+        logger.info("preview downloaded: %s → %s", url, dest)
+        return str(dest)
+    except Exception as exc:
+        logger.warning("preview download failed for %s: %s", preview_url, exc)
+        return ''
+
+
 def create_video(db: Session, payload: VideoCreateRequest) -> Video:
     site = payload.source_site or parse_source_site(payload.url)
     video = Video(
@@ -114,6 +151,13 @@ def create_video(db: Session, payload: VideoCreateRequest) -> Video:
     )
     db.add(video)
     db.flush()
+
+    # 下载预览图
+    screenshot_path = ''
+    if payload.preview_url:
+        screenshot_path = _download_preview(payload.preview_url, video.id)
+        if screenshot_path:
+            video.screenshot_path = screenshot_path
 
     history = DownloadHistory(
         video_id=video.id,

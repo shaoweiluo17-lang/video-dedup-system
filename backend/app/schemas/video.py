@@ -11,6 +11,7 @@ class CheckResponseItem(BaseModel):
     duration_secs: int
     size_mb: Decimal
     download_path: str
+    screenshot_path: str = ''
     source_site: str
     score: float
 
@@ -31,6 +32,7 @@ class VideoCreateRequest(BaseModel):
     source_site: str = ''
     download_date: Optional[datetime] = None
     download_path: str = ''
+    preview_url: str = ''
 
 
 class VideoOut(BaseModel):
@@ -80,6 +82,7 @@ class VideoImportItem(BaseModel):
     source_site: str = ''
     download_date: Optional[datetime] = None
     download_path: str = ''
+    preview_url: str = ''
 
 
 class VideoImportRequest(BaseModel):
