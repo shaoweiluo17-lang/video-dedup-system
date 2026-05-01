@@ -313,6 +313,8 @@ async function handleScanDir() {
       url: '',
       title: f.title,
       size_mb: f.size_mb,
+      duration_secs: f.duration_secs || 0,
+      duration_str: f.duration_str || '',
       download_path: f.path,
       source_site: 'local',
       category: '',

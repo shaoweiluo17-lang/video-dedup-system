@@ -1,6 +1,8 @@
 """工具接口：文件大小检测、目录扫描等"""
+import json
 import os
 import re
+import subprocess
 from pathlib import Path
 
 from fastapi import APIRouter, Query
@@ -8,6 +10,34 @@ from fastapi import APIRouter, Query
 router = APIRouter(prefix='/api/v1/utils', tags=['utils'])
 
 VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.ts', '.mpg', '.mpeg', '.3gp'}
+
+
+def _ffprobe_duration(filepath: str) -> tuple[int, str]:
+    """返回 (duration_secs, duration_str)，失败返回 (0, '')"""
+    try:
+        result = subprocess.run(
+            [
+                'ffprobe', '-v', 'quiet', '-print_format', 'json',
+                '-show_format', filepath,
+            ],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode != 0:
+            return 0, ''
+        info = json.loads(result.stdout)
+        dur = float(info.get('format', {}).get('duration', 0))
+        if dur <= 0:
+            return 0, ''
+        secs = int(dur)
+        h, m = divmod(secs, 3600)
+        m, s = divmod(m, 60)
+        if h > 0:
+            dur_str = f'{h}:{m:02d}:{s:02d}'
+        else:
+            dur_str = f'{m}:{s:02d}'
+        return secs, dur_str
+    except Exception:
+        return 0, ''
 
 
 @router.get('/file-info', summary='获取文件信息')
@@ -35,6 +65,7 @@ async def scan_dir(path: str = Query(..., description='目录的绝对路径')):
     for f in sorted(dir_path.iterdir()):
         if f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS:
             stat = f.stat()
+            dur_secs, dur_str = _ffprobe_duration(str(f))
             # 从文件名提取标题（去掉扩展名和常见下载标记）
             title = re.sub(r'\s*[\[\(]?(?:720p|1080p|HD|4K|下载|在线)[\]\)]?\s*', '', f.stem).strip()
             files.append({
@@ -43,6 +74,8 @@ async def scan_dir(path: str = Query(..., description='目录的绝对路径')):
                 'path': str(f),
                 'size_mb': round(stat.st_size / (1024 * 1024), 2),
                 'size_bytes': stat.st_size,
+                'duration_secs': dur_secs,
+                'duration_str': dur_str,
             })
 
     return {'count': len(files), 'files': files}
