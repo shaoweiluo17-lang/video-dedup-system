@@ -123,7 +123,7 @@ const BUILTIN_RULES = [
       },
       duration_secs: {
         type: 'eval',
-        code: '(()=>{const v=document.querySelector("video");if(v&&v.duration)return Math.round(v.duration);const t=document.querySelector(".fp-duration");if(t){const p=t.textContent.trim().split(":");if(p.length===2)return parseInt(p[0])*60+parseInt(p[1]);if(p.length===3)return parseInt(p[0])*3600+parseInt(p[1])*60+parseInt(p[2]);}return 0})()',
+        code: '(()=>{const v=document.querySelector("video");if(v&&v.duration>0)return Math.round(v.duration);const t=document.querySelector(".fp-duration");if(t){const p=t.textContent.trim().split(":");if(p.length===2)return parseInt(p[0])*60+parseInt(p[1]);if(p.length===3)return parseInt(p[0])*3600+parseInt(p[1])*60+parseInt(p[2]);}return 0})()',
       },
       duration_str: {
         type: 'css',
