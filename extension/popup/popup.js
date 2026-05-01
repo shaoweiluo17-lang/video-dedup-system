@@ -17,7 +17,11 @@ const els = {
   videoInfoContent: $('#videoInfoContent'),
   btnCheck: $('#btnCheck'),
   btnAdd: $('#btnAdd'),
+  btnUpdate: $('#btnUpdate'),
   btnRefresh: $('#btnRefresh'),
+  btnScanDir: $('#btnScanDir'),
+  vImportDir: $('#vImportDir'),
+  importStatus: $('#importStatus'),
   resultSection: $('#resultSection'),
   resultTitle: $('#resultTitle'),
   resultContent: $('#resultContent'),
@@ -116,12 +120,15 @@ function showNoVideo() {
 function bindEvents() {
   els.btnCheck.addEventListener('click', handleCheck);
   els.btnAdd.addEventListener('click', handleAdd);
+  els.btnUpdate.addEventListener('click', handleUpdate);
   els.btnRefresh.addEventListener('click', async () => {
     await scanPage();
     await loadStats();
     els.resultSection.classList.add('hidden');
     els.btnAdd.classList.add('hidden');
+    els.btnUpdate.classList.add('hidden');
   });
+  els.btnScanDir.addEventListener('click', handleScanDir);
   els.vDownloadPath.addEventListener('blur', detectFileSize);
   els.vDownloadPath.addEventListener('change', detectFileSize);
 }
@@ -153,9 +160,11 @@ async function handleCheck() {
     if (result.exists) {
       setStatus(`发现 ${result.level} 级别匹配`);
       els.btnAdd.classList.add('hidden');
+      els.btnUpdate.classList.remove('hidden');
     } else {
       setStatus('✅ 未发现重复');
       els.btnAdd.classList.remove('hidden');
+      els.btnUpdate.classList.add('hidden');
     }
   } catch (e) {
     setStatus(`检查失败: ${e.message}`);
@@ -242,6 +251,85 @@ async function handleAdd() {
     setStatus(`添加失败: ${e.message}`);
   } finally {
     els.btnAdd.disabled = false;
+  }
+}
+
+async function handleUpdate() {
+  if (!lastCheckResult || !lastCheckResult.matches || lastCheckResult.matches.length === 0) return;
+  const match = lastCheckResult.matches[0]; // 补全最高分匹配的记录
+  els.btnUpdate.disabled = true;
+  setStatus('正在补全数据...');
+
+  try {
+    const patch = {};
+    if (currentVideo.url && !match.url) patch.url = currentVideo.url;
+    // preview_url 总是从当前页面取最新的
+    if (currentVideo.preview_url) patch.preview_url = currentVideo.preview_url;
+    if (currentVideo.duration_secs && (!match.duration_secs || match.duration_secs === 0)) {
+      patch.duration_secs = currentVideo.duration_secs;
+    }
+    if (currentVideo.duration_str && !match.duration_str) {
+      patch.duration_str = currentVideo.duration_str;
+    }
+
+    if (Object.keys(patch).length === 0) {
+      setStatus('无需补全，数据已完整');
+      return;
+    }
+
+    const result = await chrome.runtime.sendMessage({
+      action: 'updateVideo',
+      video_id: match.id,
+      patch,
+    });
+
+    if (result.error) throw new Error(result.error);
+    setStatus(`✅ 已补全 #${match.id}`);
+    els.btnUpdate.classList.add('hidden');
+    await loadStats();
+  } catch (e) {
+    setStatus(`补全失败: ${e.message}`);
+  } finally {
+    els.btnUpdate.disabled = false;
+  }
+}
+
+async function handleScanDir() {
+  const dir = (els.vImportDir.value || '').trim();
+  if (!dir) { els.importStatus.textContent = '请输入目录路径'; return; }
+  els.importStatus.textContent = '正在扫描...';
+  els.btnScanDir.disabled = true;
+
+  try {
+    const scanResp = await fetch(`http://127.0.0.1:18080/api/v1/utils/scan-dir?path=${encodeURIComponent(dir)}`);
+    const scanData = await scanResp.json();
+    if (scanData.error) { els.importStatus.textContent = scanData.error; return; }
+    if (scanData.count === 0) { els.importStatus.textContent = '未发现视频文件'; return; }
+
+    els.importStatus.textContent = `发现 ${scanData.count} 个文件，正在导入...`;
+
+    // 调批量导入
+    const items = scanData.files.map(f => ({
+      url: '',
+      title: f.title,
+      size_mb: f.size_mb,
+      download_path: f.path,
+      source_site: 'local',
+      category: '',
+    }));
+
+    const importResp = await chrome.runtime.sendMessage({
+      action: 'importVideos',
+      items,
+    });
+
+    if (importResp.error) throw new Error(importResp.error);
+    els.importStatus.textContent = `✅ 导入 ${importResp.success_count} / ${scanData.count} (跳过 ${importResp.duplicate_count} 重复)`;
+    await loadStats();
+  } catch (e) {
+    els.importStatus.textContent = `扫描失败: ${e.message}`;
+  } finally {
+    els.btnScanDir.disabled = false;
   }
 }
 

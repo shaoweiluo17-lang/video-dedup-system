@@ -108,6 +108,16 @@ async function handleMessage(msg, sender) {
       }
     }
 
+    // 补全视频数据
+    case 'updateVideo': {
+      return apiCall(`/api/v1/videos/${msg.video_id}`, 'PATCH', msg.patch || {});
+    }
+
+    // 批量导入
+    case 'importVideos': {
+      return apiCall('/api/v1/videos/import', 'POST', { items: msg.items || [] });
+    }
+
     default:
       return { error: `unknown action: ${msg.action}` };
   }

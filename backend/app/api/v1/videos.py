@@ -19,6 +19,7 @@ from app.schemas.video import (
     VideoOut,
     VideoStatsResponse,
     VideoUpdateScreenshotRequest,
+    VideoUpdateRequest,
     ScreenshotTaskRequest,
     ScreenshotTaskResponse,
     ScanLocalRequest,
@@ -29,6 +30,7 @@ from app.services.video_service import (
     create_video,
     get_stats,
     import_video_item,
+    update_video as update_video_service,
 )
 from app.services.screenshot_service import process_pending_screenshots
 from app.services.scanner_service import scan_local_directory
@@ -158,6 +160,16 @@ def update_screenshot(video_id: int, payload: VideoUpdateScreenshotRequest, db: 
     db.refresh(record)
     get_redis_client().delete('video:stats')
     return VideoOut.model_validate(record)
+
+
+@router.patch('/{video_id}', response_model=VideoOut)
+def update_video(video_id: int, payload: VideoUpdateRequest, db: Session = Depends(get_db)):
+    video = update_video_service(db, video_id, payload)
+    if not video:
+        raise HTTPException(status_code=404, detail='Video not found')
+    get_redis_client().delete('video:stats')
+    get_redis_client().delete(f'video:check:*')
+    return VideoOut.model_validate(video)
 
 
 @router.post('/import', response_model=VideoImportResponse)

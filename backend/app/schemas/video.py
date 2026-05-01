@@ -74,6 +74,19 @@ class VideoUpdateScreenshotRequest(BaseModel):
     screenshot_path: str
 
 
+class VideoUpdateRequest(BaseModel):
+    """可选更新字段 — 只传需要更新的"""
+    url: Optional[str] = None
+    title: Optional[str] = None
+    size_mb: Optional[Decimal] = None
+    duration_secs: Optional[int] = None
+    duration_str: Optional[str] = None
+    category: Optional[str] = None
+    source_site: Optional[str] = None
+    download_path: Optional[str] = None
+    preview_url: Optional[str] = None
+
+
 class VideoImportItem(BaseModel):
     url: str
     title: str

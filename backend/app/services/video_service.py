@@ -229,3 +229,32 @@ def get_stats(db: Session) -> dict:
         'total_duration_secs': int(row[2] or 0),
         'pending_screenshot': int(pending),
     }
+
+
+def update_video(db: Session, video_id: int, payload) -> Optional[Video]:
+    """PATCH 更新单条视频的字段（传 None 的字段不更新）"""
+    from app.schemas.video import VideoUpdateRequest
+    from app.core.config import settings
+
+    video = db.query(Video).filter(Video.id == video_id, Video.is_deleted == 0).first()
+    if not video:
+        return None
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        if value is not None:
+            if key == 'title':
+                setattr(video, 'title_pinyin', title_to_pinyin(value))
+                setattr(video, 'title_normalized', normalize_title(value))
+            setattr(video, key, value)
+
+    # 如果传了 preview_url 且还没有 preview_path，下载预览图
+    if update_data.get('preview_url') and not video.preview_path:
+        preview_path = _download_preview(update_data['preview_url'], video.id)
+        if preview_path:
+            video.preview_path = preview_path
+
+    video.updated_at = datetime.now()
+    db.commit()
+    db.refresh(video)
+    return video
