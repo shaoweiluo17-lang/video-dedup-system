@@ -1,0 +1,258 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "description": "视频网页元数据提取规则 — 基于 CSS 选择器 + 正则后处理。支持 selector 链和 fallback。",
+    "created": "2026-05-01"
+  },
+  "rules": [
+    {
+      "field": "title",
+      "label": "视频标题",
+      "description": "从 headline 区域的 h1 中提取标题文本",
+      "selectors": [
+        {
+          "css": ".headline h1",
+          "method": "text",
+          "trim": true
+        }
+      ],
+      "fallback": [
+        {
+          "source": "flashvars",
+          "key": "video_title",
+          "method": "text"
+        }
+      ]
+    },
+    {
+      "field": "preview_url",
+      "label": "预览图 URL",
+      "description": "提取视频预览图 (preview.jpg) 的完整 URL",
+      "selectors": [
+        {
+          "css": ".video-holder img[src*=\"preview\"]",
+          "method": "attr",
+          "attr": "src",
+          "post_process": [
+            { "action": "ensure_https" }
+          ]
+        }
+      ],
+      "fallback": [
+        {
+          "source": "flashvars",
+          "key": "preview_url",
+          "post_process": [
+            { "action": "ensure_https" }
+          ]
+        }
+      ],
+      "download": {
+        "enabled": false,
+        "dir": "media/previews",
+        "timeout_secs": 30
+      }
+    },
+    {
+      "field": "duration",
+      "label": "视频时长",
+      "description": "提取视频时长，格式 MM:SS 或 HH:MM:SS",
+      "selectors": [
+        {
+          "css": ".fp-duration",
+          "method": "text",
+          "trim": true,
+          "validate": "^\\d{1,3}:\\d{2}(:\\d{2})?$"
+        }
+      ],
+      "fallback": [
+        {
+          "css": ".fp-time-duration",
+          "method": "text",
+          "trim": true
+        },
+        {
+          "css": ".tools-left li",
+          "method": "text",
+          "filter_keyword": "Duration",
+          "child_selector": ".title-description",
+          "trim": true
+        }
+      ],
+      "transform": {
+        "action": "parse_duration_secs",
+        "output_field": "duration_secs"
+      }
+    },
+    {
+      "field": "page_url",
+      "label": "页面完整 URL",
+      "description": "从社交分享链接中提取视频独立页面地址",
+      "selectors": [
+        {
+          "css": ".sharesTwitter",
+          "method": "attr",
+          "attr": "href",
+          "post_process": [
+            { "action": "regex_extract", "pattern": "url=([^&]+)" },
+            { "action": "url_decode" }
+          ]
+        }
+      ],
+      "fallback": [
+        {
+          "css": ".sharesReddit",
+          "method": "attr",
+          "attr": "href",
+          "post_process": [
+            { "action": "regex_extract", "pattern": "url=([^&]+)" },
+            { "action": "url_decode" }
+          ]
+        },
+        {
+          "css": ".sharesTumblr",
+          "method": "attr",
+          "attr": "href",
+          "post_process": [
+            { "action": "regex_extract", "pattern": "u=([^&]+)" },
+            { "action": "url_decode" }
+          ]
+        }
+      ]
+    },
+    {
+      "field": "video_id",
+      "label": "视频 ID",
+      "description": "提取平台视频唯一标识",
+      "selectors": [
+        {
+          "css": "[data-video-id]",
+          "method": "attr",
+          "attr": "data-video-id"
+        }
+      ],
+      "fallback": [
+        {
+          "source": "flashvars",
+          "key": "video_id"
+        }
+      ]
+    },
+    {
+      "field": "mp4_url",
+      "label": "视频文件 URL",
+      "description": "提取 .mp4 视频文件直链",
+      "selectors": [
+        {
+          "css": ".fp-engine[src]",
+          "method": "attr",
+          "attr": "src",
+          "post_process": [
+            { "action": "ensure_https" }
+          ]
+        }
+      ],
+      "fallback": [
+        {
+          "source": "flashvars",
+          "key": "video_url",
+          "post_process": [
+            { "action": "ensure_https" }
+          ]
+        }
+      ]
+    },
+    {
+      "field": "categories",
+      "label": "分类",
+      "description": "提取视频分类标签（多值）",
+      "selectors": [
+        {
+          "css": ".description a[href*=\"/categories/\"]",
+          "method": "text",
+          "trim": true,
+          "multi": true
+        }
+      ]
+    },
+    {
+      "field": "tags",
+      "label": "标签",
+      "description": "提取视频标签（多值）",
+      "selectors": [
+        {
+          "css": ".description a[href*=\"/tags/\"]",
+          "method": "text",
+          "trim": true,
+          "multi": true
+        }
+      ]
+    },
+    {
+      "field": "author",
+      "label": "上传者",
+      "description": "提取视频上传者用户名",
+      "selectors": [
+        {
+          "css": ".description a.author",
+          "method": "text",
+          "trim": true
+        }
+      ]
+    },
+    {
+      "field": "rating",
+      "label": "评分",
+      "description": "提取视频评分（星数）",
+      "selectors": [
+        {
+          "css": "#rating_container img[src*=\"star-1.png\"]",
+          "method": "count"
+        }
+      ]
+    },
+    {
+      "field": "views",
+      "label": "观看数",
+      "description": "提取视频观看次数",
+      "selectors": [
+        {
+          "css": ".tools-left li",
+          "method": "text",
+          "filter_keyword": "Viewed",
+          "child_selector": ".title-description",
+          "trim": true,
+          "post_process": [
+            { "action": "strip_chars", "chars": "," },
+            { "action": "to_int" }
+          ]
+        }
+      ]
+    },
+    {
+      "field": "added_date",
+      "label": "上传时间",
+      "description": "提取视频上传时间描述",
+      "selectors": [
+        {
+          "css": ".tools-left li",
+          "method": "text",
+          "filter_keyword": "Added",
+          "child_selector": ".title-description",
+          "trim": true
+        }
+      ]
+    }
+  ],
+
+  "global_config": {
+    "flashvars_detection": {
+      "enabled": true,
+      "script_selector": "script",
+      "pattern": "(\\w+)\\s*:\\s*'([^']+)'",
+      "mode": "json_style"
+    },
+    "encoding": "utf-8",
+    "strict_mode": false
+  }
+}

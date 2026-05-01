@@ -114,6 +114,20 @@ def list_videos(
     return VideoListResponse(total=total, items=[VideoOut.model_validate(r) for r in records])
 
 
+@router.get('/stats', response_model=VideoStatsResponse)
+def video_stats(db: Session = Depends(get_db)):
+    redis_client = get_redis_client()
+    cached = redis_client.get('video:stats')
+    if cached:
+        data = json.loads(cached)
+        return VideoStatsResponse(**data)
+
+    data = get_stats(db)
+    resp = VideoStatsResponse(**data)
+    redis_client.setex('video:stats', settings.STATS_CACHE_TTL_SECONDS, resp.model_dump_json())
+    return resp
+
+
 @router.get('/{video_id}', response_model=VideoOut)
 def get_video(video_id: int, db: Session = Depends(get_db)):
     record = db.query(Video).filter(Video.id == video_id, Video.is_deleted == 0).first()
@@ -143,20 +157,6 @@ def update_screenshot(video_id: int, payload: VideoUpdateScreenshotRequest, db: 
     db.refresh(record)
     get_redis_client().delete('video:stats')
     return VideoOut.model_validate(record)
-
-
-@router.get('/stats', response_model=VideoStatsResponse)
-def video_stats(db: Session = Depends(get_db)):
-    redis_client = get_redis_client()
-    cached = redis_client.get('video:stats')
-    if cached:
-        data = json.loads(cached)
-        return VideoStatsResponse(**data)
-
-    data = get_stats(db)
-    resp = VideoStatsResponse(**data)
-    redis_client.setex('video:stats', settings.STATS_CACHE_TTL_SECONDS, resp.model_dump_json())
-    return resp
 
 
 @router.post('/import', response_model=VideoImportResponse)
