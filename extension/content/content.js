@@ -140,7 +140,7 @@ const BUILTIN_RULES = [
       },
       preview_url: {
         type: 'eval',
-        code: "(()=>{const el=document.querySelector('.video-holder img[src*=\"preview\"], .fp-poster img');if(el){let v=el.getAttribute('src')||'';return v.startsWith('//')?'https:'+v:v;}const meta=document.querySelector('meta[property=\"og:image\"]');if(meta){let v=meta.getAttribute('content')||'';return v.startsWith('//')?'https:'+v:v;}return ''})()",
+        code: "(()=>{const tryEl=(sel,attr)=>{const el=document.querySelector(sel);if(!el)return null;let v=el.getAttribute(attr)||'';return v.startsWith('//')?'https:'+v:v;};return tryEl('meta[property=\"og:image\"]','content')||tryEl('meta[name=\"twitter:image\"]','content')||tryEl('.video-holder img[src*=\"preview\"]','src')||tryEl('.fp-poster img','src')||tryEl('link[rel=\"image_src\"]','href')||tryEl('video[poster]','poster')||(()=>{const imgs=document.querySelectorAll('.video-holder img');for(const img of imgs){const s=img.getAttribute('src')||'';if(s&&/\\.(jpg|jpeg|png|webp)/i.test(s))return s.startsWith('//')?'https:'+s:s;}return '';})()})()",
       },
     },
   },
