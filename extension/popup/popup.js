@@ -65,6 +65,18 @@ function renderVideoInfo(info) {
     ? `${info.duration_str} (${info.duration_secs}秒)`
     : '未知';
   els.vSource.textContent = info.source_site || '未知';
+
+  // 显示预览图
+  const existingImg = els.videoInfoContent.querySelector('.preview-thumb');
+  if (existingImg) existingImg.remove();
+  if (info.preview_url) {
+    const img = document.createElement('img');
+    img.className = 'preview-thumb';
+    img.src = info.preview_url;
+    img.style.cssText = 'max-width:100%;max-height:120px;margin-top:8px;border-radius:6px;display:block;';
+    img.onerror = () => img.remove();
+    els.videoInfoContent.appendChild(img);
+  }
 }
 
 function showNoVideo() {
@@ -161,6 +173,7 @@ function renderResult(result) {
         <div style="color:#888;">
           时长: ${m.duration_secs}s | 大小: ${m.size_mb}MB | 路径: ${escapeHtml(m.download_path || '-')}
         </div>
+        ${m.screenshot_path ? `<div style="font-size:11px;color:#666;">🖼️ 预览: ${escapeHtml(m.screenshot_path.split('/').pop() || m.screenshot_path)}</div>` : ''}
         <div style="font-size:10px;color:#aaa;">相似度: ${(m.score * 100).toFixed(0)}%</div>
       </div>`
     )
@@ -184,6 +197,7 @@ async function handleAdd() {
       size_mb: currentVideo.size_mb,
       category: currentVideo.category,
       source_site: currentVideo.source_site,
+      preview_url: currentVideo.preview_url || '',
     });
 
     if (result.error) throw new Error(result.error);

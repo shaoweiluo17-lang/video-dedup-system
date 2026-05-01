@@ -116,26 +116,32 @@ const BUILTIN_RULES = [
     extractors: {
       title: {
         type: 'css',
-        selector: 'meta[property="og:title"]',
+        selector: 'h1, .headline h1, meta[property="og:title"]',
         fallback: 'title',
-        attr: 'content',
+        attr: null,
         postProcess: ['trim', 'removeSiteSuffix'],
       },
       duration_secs: {
         type: 'eval',
-        code: '(()=>{const v=document.querySelector("video");return v&&v.duration?Math.round(v.duration):0})()',
+        code: '(()=>{const v=document.querySelector("video");if(v&&v.duration)return Math.round(v.duration);const t=document.querySelector(".fp-duration");if(t){const p=t.textContent.trim().split(":");if(p.length===2)return parseInt(p[0])*60+parseInt(p[1]);if(p.length===3)return parseInt(p[0])*3600+parseInt(p[1])*60+parseInt(p[2]);}return 0})()',
       },
       duration_str: {
-        type: 'eval',
-        code: '(()=>{const v=document.querySelector("video");if(!v||!v.duration)return"";const m=Math.floor(v.duration/60);return m+":"+String(Math.round(v.duration%60)).padStart(2,"0")})()',
+        type: 'css',
+        selector: '.fp-duration, .fp-time-duration',
+        fallback: '',
+        attr: null,
+        postProcess: ['trim'],
       },
       category: {
         type: 'css',
-        selector: 'meta[property="article:section"], meta[name="category"]',
-        attr: 'content',
+        selector: 'meta[property="article:section"], meta[name="category"], .description a[href*="/categories/"]',
+        attr: null,
         postProcess: ['trim'],
       },
-    },
+      preview_url: {
+        type: 'eval',
+        code: "(()=>{const el=document.querySelector('.video-holder img[src*=\"preview\"], .fp-poster img');if(el){let v=el.getAttribute('src')||'';return v.startsWith('//')?'https:'+v:v;}const meta=document.querySelector('meta[property=\"og:image\"]');if(meta){let v=meta.getAttribute('content')||'';return v.startsWith('//')?'https:'+v:v;}return ''})()",
+      },
   },
 ];
 
@@ -183,6 +189,12 @@ const POST_PROCESSORS = {
       .replace(/\s*[-–—|｜_]\s*(B站|bilibili|YouTube|youtube|抖音|douyin|观看|在线).*$/i, '')
       .replace(/\s*[-–—|｜_].*$/, '')
       .trim();
+  },
+
+  ensureHttps(v) {
+    v = String(v || '').trim();
+    if (v.startsWith('//')) return 'https:' + v;
+    return v;
   },
 };
 
@@ -297,6 +309,7 @@ class RuleEngine {
       size_mb: 0,
       source_site: window.location.hostname,
       category: '',
+      preview_url: '',
     };
 
     if (!rule || !rule.extractors) return info;

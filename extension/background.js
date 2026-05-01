@@ -71,6 +71,7 @@ async function handleMessage(msg, sender) {
         category: msg.category || '',
         source_site: msg.source_site || '',
         download_path: msg.download_path || '',
+        preview_url: msg.preview_url || '',
       });
     }
 
