@@ -173,8 +173,8 @@ function renderResult(result) {
         <div style="color:#888;">
           时长: ${m.duration_secs}s | 大小: ${m.size_mb}MB | 路径: ${escapeHtml(m.download_path || '-')}
         </div>
-        ${m.preview_path ? `<div style="font-size:11px;color:#666;">🌐 网页预览: ${escapeHtml(m.preview_path.split('/').pop() || m.preview_path)}</div>` : ''}
-        ${m.screenshot_path ? `<div style="font-size:11px;color:#666;">🎬 视频截图: ${escapeHtml(m.screenshot_path.split('/').pop() || m.screenshot_path)}</div>` : ''}
+        ${m.preview_path ? `<img src="http://127.0.0.1:18080/screenshots/${encodeURIComponent(filenameFromPath(m.preview_path))}" style="max-width:100%;max-height:80px;margin-top:4px;border-radius:4px;" onerror="this.style.display='none'" /><div style="font-size:10px;color:#888;">🌐 网页预览</div>` : ''}
+        ${m.screenshot_path ? `<img src="http://127.0.0.1:18080/screenshots/${encodeURIComponent(filenameFromPath(m.screenshot_path))}" style="max-width:100%;max-height:80px;margin-top:4px;border-radius:4px;" onerror="this.style.display='none'" /><div style="font-size:10px;color:#888;">🎬 视频截图</div>` : ''}
         <div style="font-size:10px;color:#aaa;">相似度: ${(m.score * 100).toFixed(0)}%</div>
       </div>`
     )
@@ -210,6 +210,10 @@ async function handleAdd() {
   } finally {
     els.btnAdd.disabled = false;
   }
+}
+
+function filenameFromPath(p) {
+  return (p || '').replace(/\\/g, '/').split('/').pop();
 }
 
 // ==================== 统计 ====================
