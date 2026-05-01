@@ -171,7 +171,9 @@ function renderResult(result) {
       <div class="match-item">
         <div style="font-weight:600;">${escapeHtml(m.title)}</div>
         <div style="color:#888;">
-          时长: ${m.duration_secs}s | 大小: ${m.size_mb}MB | 路径: ${escapeHtml(m.download_path || '-')}
+          ${m.duration_str ? `⏱ ${escapeHtml(m.duration_str)}` : (m.duration_secs ? `⏱ ${m.duration_secs}s` : '')}
+          ${m.size_mb && m.size_mb > 0 ? ` | 📦 ${Number(m.size_mb).toFixed(0)}MB` : ''}
+          ${m.download_path ? ` | 📁 ${escapeHtml(m.download_path)}` : ' | ⚠ 未下载'}
         </div>
         ${m.preview_path ? `<img src="http://127.0.0.1:18080/screenshots/${encodeURIComponent(filenameFromPath(m.preview_path))}" style="max-width:100%;max-height:80px;margin-top:4px;border-radius:4px;" onerror="this.style.display='none'" /><div style="font-size:10px;color:#888;">🌐 网页预览</div>` : ''}
         ${m.screenshot_path ? `<img src="http://127.0.0.1:18080/screenshots/${encodeURIComponent(filenameFromPath(m.screenshot_path))}" style="max-width:100%;max-height:80px;margin-top:4px;border-radius:4px;" onerror="this.style.display='none'" /><div style="font-size:10px;color:#888;">🎬 视频截图</div>` : ''}
