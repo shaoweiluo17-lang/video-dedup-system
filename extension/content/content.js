@@ -24,7 +24,7 @@ const BUILTIN_RULES = [
         attr: null,
         regex: '',
         regexGroup: 0,
-        postProcess: ['trim', 'removeSiteSuffix'],
+        postProcess: ['trim', 'normalizeWhitespace', 'removeSiteSuffix'],
       },
       duration_secs: {
         type: 'css',
@@ -44,7 +44,7 @@ const BUILTIN_RULES = [
         fallback: 'meta[name="keywords"]',
         attr: null,
         regex: '',
-        postProcess: ['trim'],
+        postProcess: ['trim', 'normalizeWhitespace'],
       },
     },
   },
@@ -59,7 +59,7 @@ const BUILTIN_RULES = [
         selector: 'h1.ytd-video-primary-info-renderer yt-formatted-string, h1.style-scope.ytd-watch-metadata yt-formatted-string',
         fallback: 'meta[name="title"]',
         attr: null,
-        postProcess: ['trim'],
+        postProcess: ['trim', 'normalizeWhitespace'],
       },
       duration_secs: {
         type: 'css',
@@ -79,7 +79,7 @@ const BUILTIN_RULES = [
         type: 'css',
         selector: 'meta[itemprop="genre"]',
         attr: 'content',
-        postProcess: ['trim'],
+        postProcess: ['trim', 'normalizeWhitespace'],
       },
     },
   },
@@ -94,7 +94,7 @@ const BUILTIN_RULES = [
         selector: 'meta[property="og:title"]',
         fallback: 'title',
         attr: 'content',
-        postProcess: ['trim'],
+        postProcess: ['trim', 'normalizeWhitespace'],
       },
       duration_secs: {
         type: 'css',
@@ -119,7 +119,7 @@ const BUILTIN_RULES = [
         selector: 'h1, .headline h1, meta[property="og:title"]',
         fallback: 'title',
         attr: null,
-        postProcess: ['trim', 'removeSiteSuffix'],
+        postProcess: ['trim', 'normalizeWhitespace', 'removeSiteSuffix'],
       },
       duration_secs: {
         type: 'function',
@@ -130,13 +130,13 @@ const BUILTIN_RULES = [
         selector: '.fp-duration, .fp-time-duration',
         fallback: '',
         attr: null,
-        postProcess: ['trim'],
+        postProcess: ['trim', 'normalizeWhitespace'],
       },
       category: {
         type: 'css',
         selector: 'meta[property="article:section"], meta[name="category"], .description a[href*="/categories/"]',
         attr: null,
-        postProcess: ['trim'],
+        postProcess: ['trim', 'normalizeWhitespace'],
       },
       preview_url: {
         type: 'function',
@@ -228,6 +228,14 @@ const POST_PROCESSORS = {
     return String(v || '')
       .replace(/\s*[-–—|｜_]\s*(B站|bilibili|YouTube|youtube|抖音|douyin|观看|在线|Watch|HD|4K|1080p|720p)\s*$/i, '')
       .replace(/\s*[-–—|｜_]\s*[a-z0-9.-]+\.[a-z]{2,}\s*$/i, '')  // 只删末尾英文域名
+      .trim();
+  },
+
+  /** 归一化空白字符：&nbsp;→空格，合并连续空格 */
+  normalizeWhitespace(v) {
+    return String(v || '')
+      .replace(/\u00A0/g, ' ')   // &nbsp; → 空格
+      .replace(/\s+/g, ' ')      // 合并连续空白
       .trim();
   },
 
