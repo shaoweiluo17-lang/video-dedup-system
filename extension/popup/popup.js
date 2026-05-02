@@ -17,7 +17,6 @@ const els = {
   videoInfoContent: $('#videoInfoContent'),
   btnCheck: $('#btnCheck'),
   btnAdd: $('#btnAdd'),
-  btnUpdate: $('#btnUpdate'),
   btnRefresh: $('#btnRefresh'),
   btnScanDir: $('#btnScanDir'),
   vImportDir: $('#vImportDir'),
@@ -120,13 +119,11 @@ function showNoVideo() {
 function bindEvents() {
   els.btnCheck.addEventListener('click', handleCheck);
   els.btnAdd.addEventListener('click', handleAdd);
-  els.btnUpdate.addEventListener('click', handleUpdate);
   els.btnRefresh.addEventListener('click', async () => {
     await scanPage();
     await loadStats();
     els.resultSection.classList.add('hidden');
     els.btnAdd.classList.add('hidden');
-    els.btnUpdate.classList.add('hidden');
   });
   els.btnScanDir.addEventListener('click', handleScanDir);
   els.vDownloadPath.addEventListener('blur', detectFileSize);
@@ -158,20 +155,16 @@ async function handleCheck() {
     renderResult(result);
 
     if (result.exists) {
-      els.btnUpdate.classList.remove('hidden');
       if (result.level === 'strong') {
-        // 强匹配：高度疑似重复，隐藏入库
         setStatus('🔴 强匹配 — 高度疑似重复');
         els.btnAdd.classList.add('hidden');
       } else {
-        // 中/弱匹配：可能不重复，保留入库按钮
         setStatus(`⚠ ${result.level === 'medium' ? '中' : '弱'}匹配 — 可能不重复`);
         els.btnAdd.classList.remove('hidden');
       }
     } else {
       setStatus('✅ 未发现重复');
       els.btnAdd.classList.remove('hidden');
-      els.btnUpdate.classList.add('hidden');
     }
   } catch (e) {
     setStatus(`检查失败: ${e.message}`);
@@ -214,7 +207,7 @@ function renderResult(result) {
   card.innerHTML = (result.matches || [])
     .map(
       (m) => `
-      <div class="match-item">
+      <div class="match-item" id="match-${m.id}">
         <div style="font-weight:600;">${escapeHtml(m.title)}</div>
         <div style="color:#888;">
           ${m.duration_str ? `⏱ ${escapeHtml(m.duration_str)}` : (m.duration_secs ? `⏱ ${m.duration_secs}s` : '')}
@@ -223,11 +216,19 @@ function renderResult(result) {
         </div>
         ${m.preview_path ? `<img src="http://127.0.0.1:18080/screenshots/${encodeURIComponent(filenameFromPath(m.preview_path))}" style="max-width:100%;max-height:80px;margin-top:4px;border-radius:4px;" onerror="this.style.display='none'" /><div style="font-size:10px;color:#888;">🌐 网页预览</div>` : ''}
         ${m.screenshot_path ? `<img src="http://127.0.0.1:18080/screenshots/${encodeURIComponent(filenameFromPath(m.screenshot_path))}" style="max-width:100%;max-height:80px;margin-top:4px;border-radius:4px;" onerror="this.style.display='none'" /><div style="font-size:10px;color:#888;">🎬 视频截图</div>` : ''}
-        <div style="font-size:10px;color:#aaa;">相似度: ${(m.score * 100).toFixed(0)}%</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:10px;color:#aaa;">相似度: ${(m.score * 100).toFixed(0)}%</span>
+          <button class="btn-update-match" data-id="${m.id}" style="font-size:10px;padding:2px 8px;background:#f59e0b;color:#fff;border:none;border-radius:3px;cursor:pointer;">📥 补全</button>
+        </div>
       </div>`
     )
     .join('');
   els.resultContent.appendChild(card);
+
+  // 事件代理：点每条匹配的「补全」按钮
+  card.querySelectorAll('.btn-update-match').forEach(btn => {
+    btn.addEventListener('click', () => handleUpdateMatch(parseInt(btn.dataset.id)));
+  });
 }
 
 async function handleAdd() {
@@ -261,50 +262,47 @@ async function handleAdd() {
   }
 }
 
-async function handleUpdate() {
-  if (!lastCheckResult || !lastCheckResult.matches || lastCheckResult.matches.length === 0) return;
-  els.btnUpdate.disabled = true;
-  setStatus('正在补全数据...');
+async function handleUpdateMatch(matchId) {
+  if (!currentVideo) return;
+  const match = (lastCheckResult.matches || []).find(m => m.id === matchId);
+  if (!match) return;
+
+  setStatus(`正在补全 #${matchId}...`);
+  // 禁用所有补全按钮
+  document.querySelectorAll('.btn-update-match').forEach(b => b.disabled = true);
 
   try {
-    // 从高到低找第一个真正缺字段的匹配
-    let targetMatch = null;
-    let patch = {};
-    for (const m of lastCheckResult.matches) {
-      patch = {};
-      if (currentVideo.url && !m.url) patch.url = currentVideo.url;
-      if (currentVideo.preview_url) patch.preview_url = currentVideo.preview_url;
-      if (currentVideo.duration_secs && (!m.duration_secs || m.duration_secs === 0)) {
-        patch.duration_secs = currentVideo.duration_secs;
-      }
-      if (currentVideo.duration_str && !m.duration_str) {
-        patch.duration_str = currentVideo.duration_str;
-      }
-      if (Object.keys(patch).length > 0) {
-        targetMatch = m;
-        break;
-      }
+    const patch = {};
+    if (currentVideo.url && !match.url) patch.url = currentVideo.url;
+    if (currentVideo.preview_url) patch.preview_url = currentVideo.preview_url;
+    if (currentVideo.duration_secs && (!match.duration_secs || match.duration_secs === 0)) {
+      patch.duration_secs = currentVideo.duration_secs;
+    }
+    if (currentVideo.duration_str && !match.duration_str) {
+      patch.duration_str = currentVideo.duration_str;
     }
 
-    if (!targetMatch) {
-      setStatus('所有匹配记录数据已完整，无需补全');
+    if (Object.keys(patch).length === 0) {
+      setStatus(`#${matchId} 数据已完整，无需补全`);
       return;
     }
 
     const result = await chrome.runtime.sendMessage({
       action: 'updateVideo',
-      video_id: targetMatch.id,
+      video_id: matchId,
       patch,
     });
 
     if (result.error) throw new Error(result.error);
-    setStatus(`✅ 已补全 #${targetMatch.id} (缺 ${Object.keys(patch).join(', ')})`);
-    els.btnUpdate.classList.add('hidden');
+    setStatus(`✅ 已补全 #${matchId} (${Object.keys(patch).join(', ')})`);
+    // 隐藏已补全的按钮
+    const btn = document.querySelector(`.btn-update-match[data-id="${matchId}"]`);
+    if (btn) btn.remove();
     await loadStats();
   } catch (e) {
     setStatus(`补全失败: ${e.message}`);
   } finally {
-    els.btnUpdate.disabled = false;
+    document.querySelectorAll('.btn-update-match').forEach(b => b.disabled = false);
   }
 }
 
