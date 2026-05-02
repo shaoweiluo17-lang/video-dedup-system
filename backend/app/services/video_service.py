@@ -178,11 +178,12 @@ def _download_preview(preview_url: str, video_id: int) -> str:
 
 def create_video(db: Session, payload: VideoCreateRequest) -> Video:
     site = payload.source_site or parse_source_site(payload.url)
+    title = ' '.join((payload.title or '').split())
     video = Video(
         url=payload.url,
-        title=payload.title,
-        title_pinyin=title_to_pinyin(payload.title),
-        title_normalized=normalize_title(payload.title),
+        title=title,
+        title_pinyin=title_to_pinyin(title),
+        title_normalized=normalize_title(title),
         size_mb=payload.size_mb,
         duration_secs=payload.duration_secs,
         duration_str=payload.duration_str,
