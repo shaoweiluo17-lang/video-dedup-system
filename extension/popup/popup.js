@@ -159,13 +159,14 @@ async function handleCheck() {
 
     if (result.exists) {
       els.btnUpdate.classList.remove('hidden');
-      if (result.level === 'weak') {
-        // 弱匹配可能是误判，仍允许强制入库
-        setStatus(`⚠ 弱匹配 — 可能不重复，可强制入库`);
-        els.btnAdd.classList.remove('hidden');
-      } else {
-        setStatus(`发现 ${result.level} 级别匹配`);
+      if (result.level === 'strong') {
+        // 强匹配：高度疑似重复，隐藏入库
+        setStatus('🔴 强匹配 — 高度疑似重复');
         els.btnAdd.classList.add('hidden');
+      } else {
+        // 中/弱匹配：可能不重复，保留入库按钮
+        setStatus(`⚠ ${result.level === 'medium' ? '中' : '弱'}匹配 — 可能不重复`);
+        els.btnAdd.classList.remove('hidden');
       }
     } else {
       setStatus('✅ 未发现重复');
@@ -262,35 +263,42 @@ async function handleAdd() {
 
 async function handleUpdate() {
   if (!lastCheckResult || !lastCheckResult.matches || lastCheckResult.matches.length === 0) return;
-  const match = lastCheckResult.matches[0]; // 补全最高分匹配的记录
   els.btnUpdate.disabled = true;
   setStatus('正在补全数据...');
 
   try {
-    const patch = {};
-    if (currentVideo.url && !match.url) patch.url = currentVideo.url;
-    // preview_url 总是从当前页面取最新的
-    if (currentVideo.preview_url) patch.preview_url = currentVideo.preview_url;
-    if (currentVideo.duration_secs && (!match.duration_secs || match.duration_secs === 0)) {
-      patch.duration_secs = currentVideo.duration_secs;
-    }
-    if (currentVideo.duration_str && !match.duration_str) {
-      patch.duration_str = currentVideo.duration_str;
+    // 从高到低找第一个真正缺字段的匹配
+    let targetMatch = null;
+    let patch = {};
+    for (const m of lastCheckResult.matches) {
+      patch = {};
+      if (currentVideo.url && !m.url) patch.url = currentVideo.url;
+      if (currentVideo.preview_url) patch.preview_url = currentVideo.preview_url;
+      if (currentVideo.duration_secs && (!m.duration_secs || m.duration_secs === 0)) {
+        patch.duration_secs = currentVideo.duration_secs;
+      }
+      if (currentVideo.duration_str && !m.duration_str) {
+        patch.duration_str = currentVideo.duration_str;
+      }
+      if (Object.keys(patch).length > 0) {
+        targetMatch = m;
+        break;
+      }
     }
 
-    if (Object.keys(patch).length === 0) {
-      setStatus('无需补全，数据已完整');
+    if (!targetMatch) {
+      setStatus('所有匹配记录数据已完整，无需补全');
       return;
     }
 
     const result = await chrome.runtime.sendMessage({
       action: 'updateVideo',
-      video_id: match.id,
+      video_id: targetMatch.id,
       patch,
     });
 
     if (result.error) throw new Error(result.error);
-    setStatus(`✅ 已补全 #${match.id}`);
+    setStatus(`✅ 已补全 #${targetMatch.id} (缺 ${Object.keys(patch).join(', ')})`);
     els.btnUpdate.classList.add('hidden');
     await loadStats();
   } catch (e) {
