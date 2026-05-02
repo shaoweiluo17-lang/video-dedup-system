@@ -65,9 +65,8 @@ def check_duplicate(
         return VideoCheckResponse(**data)
 
     query = db.query(Video).filter(Video.is_deleted == 0)
-    if final_source_site:
-        query = query.filter(Video.source_site == final_source_site)
 
+    # 候选：URL/title 匹配（不限 source_site，避免 local 导入的漏掉）
     candidates = query.filter(
         or_(
             Video.title_normalized == normalized,
@@ -76,6 +75,12 @@ def check_duplicate(
             Video.url == url if url else False,
         )
     ).limit(30).all()
+
+    # 同站候选用作强匹配优先排序
+    if final_source_site:
+        same_site = [v for v in candidates if v.source_site == final_source_site]
+        other_site = [v for v in candidates if v.source_site != final_source_site]
+        candidates = same_site + other_site
 
     strong_matches: list[CheckResponseItem] = []
     medium_matches: list[CheckResponseItem] = []
