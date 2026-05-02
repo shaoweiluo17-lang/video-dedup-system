@@ -72,21 +72,38 @@ def check_duplicate(
 
     query = db.query(Video).filter(Video.is_deleted == 0)
 
-    # 候选：URL/title 匹配（不限 source_site，避免 local 导入的漏掉）
-    candidates = query.filter(
-        or_(
-            Video.title_normalized == normalized,
-            Video.title_pinyin == pinyin,
-            # 双向模糊：A 包含 B 或 B 包含 A + 前缀匹配
-            Video.title.like(f"%{title}%") if title else False,
-            Video.title.like(f"{title}%") if title else False,  # 标题前缀（编号后缀场景）
-            Video.title.contains(title) if title else False,
-            Video.title.in_([title]) if title else False,  # 完全相等
-            Video.url == url if url else False,
-            Video.url == url_clean if url_clean else False,  # 去尾斜杠
-            Video.url.like(f"{url_base}%") if url_base else False,  # 忽略查询参数
-        )
-    ).limit(50).all()
+    # 🔑 先查 URL 匹配（不限量），再查标题匹配（补到 50），防止 URL 匹配被截断
+    url_conditions = []
+    if url:
+        url_conditions.append(Video.url == url)
+    if url_clean:
+        url_conditions.append(Video.url == url_clean)
+    if url_base:
+        url_conditions.append(Video.url.like(f"{url_base}%"))
+
+    url_candidates = query.filter(or_(*url_conditions)).all() if url_conditions else []
+
+    title_conditions = []
+    if normalized:
+        title_conditions.append(Video.title_normalized == normalized)
+    if pinyin:
+        title_conditions.append(Video.title_pinyin == pinyin)
+    if title:
+        title_conditions.append(Video.title.like(f"%{title}%"))
+        title_conditions.append(Video.title.like(f"{title}%"))
+        title_conditions.append(Video.title.contains(title))
+        title_conditions.append(Video.title.in_([title]))
+
+    title_candidates = query.filter(or_(*title_conditions)).limit(50).all() if title_conditions else []
+
+    # 合并去重，URL 匹配的排前面
+    seen_ids = set()
+    candidates = []
+    for v in url_candidates + title_candidates:
+        if v.id not in seen_ids:
+            seen_ids.add(v.id)
+            candidates.append(v)
+    candidates = candidates[:50]
 
     logger = logging.getLogger(__name__)
     logger.info(
