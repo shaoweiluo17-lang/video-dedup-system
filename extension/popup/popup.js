@@ -158,9 +158,15 @@ async function handleCheck() {
     renderResult(result);
 
     if (result.exists) {
-      setStatus(`发现 ${result.level} 级别匹配`);
-      els.btnAdd.classList.add('hidden');
       els.btnUpdate.classList.remove('hidden');
+      if (result.level === 'weak') {
+        // 弱匹配可能是误判，仍允许强制入库
+        setStatus(`⚠ 弱匹配 — 可能不重复，可强制入库`);
+        els.btnAdd.classList.remove('hidden');
+      } else {
+        setStatus(`发现 ${result.level} 级别匹配`);
+        els.btnAdd.classList.add('hidden');
+      }
     } else {
       setStatus('✅ 未发现重复');
       els.btnAdd.classList.remove('hidden');
