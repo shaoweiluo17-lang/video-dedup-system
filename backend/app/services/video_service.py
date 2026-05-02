@@ -66,6 +66,10 @@ def check_duplicate(
         data = json.loads(cached)
         return VideoCheckResponse(**data)
 
+    # URL 去尾斜杠 + 去查询参数，用于候选查询
+    url_clean = url.rstrip('/') if url else ''
+    url_base = url_clean.split('?')[0] if url_clean else ''
+
     query = db.query(Video).filter(Video.is_deleted == 0)
 
     # 候选：URL/title 匹配（不限 source_site，避免 local 导入的漏掉）
@@ -79,6 +83,8 @@ def check_duplicate(
             Video.title.contains(title) if title else False,
             Video.title.in_([title]) if title else False,  # 完全相等
             Video.url == url if url else False,
+            Video.url == url_clean if url_clean else False,  # 去尾斜杠
+            Video.url.like(f"{url_base}%") if url_base else False,  # 忽略查询参数
         )
     ).limit(50).all()
 
@@ -104,9 +110,13 @@ def check_duplicate(
         v_size = _decimal_to_float(v.size_mb)
         size_diff_pct = abs(v_size - target_size) / target_size if target_size > 0 else 0
 
-        # URL 完全相同 = 绝对重复 (score 1.0)
+        # URL 匹配（严格 > 去尾斜杠 > 去参数）
         if url and v.url and v.url == url:
             strong_matches.append(_to_check_item(v, 1.0))
+        elif url_clean and v.url and v.url.rstrip('/') == url_clean:
+            strong_matches.append(_to_check_item(v, 0.99))
+        elif url_base and v.url and v.url.rstrip('/').startswith(url_base):
+            strong_matches.append(_to_check_item(v, 0.98))
         # 标题前缀匹配 + 同长 = 文件名编号后缀变体 (score 0.98)
         elif dur_diff <= 3 and title and (
             (v.title or '').startswith(title) or title.startswith(v.title or '')
