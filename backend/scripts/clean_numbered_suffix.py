@@ -12,12 +12,12 @@ from app.utils.text import normalize_title, title_to_pinyin
 
 db = SessionLocal()
 
-# 匹配末尾编号： _1 _2 _10 、 (1) (2) (10) 、 -1 -2 -10 、空格+数字
-NUM_SUFFIX_RE = re.compile(r'[\s_\-]*[\[\(]?\d+[\]\)]?$')
+# 仅匹配末尾 _数字 编号
+NUM_SUFFIX_RE = re.compile(r'_\d+$')
 
 # 先查所有
 videos = db.query(Video).filter(Video.is_deleted == 0).order_by(Video.id).all()
-print(f"共 {len(videos)} 条记录，扫描编号后缀...")
+print(f"共 {len(videos)} 条记录，扫描 `_数字` 后缀...")
 
 updated = 0
 skipped = 0
