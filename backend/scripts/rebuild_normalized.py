@@ -1,6 +1,6 @@
 """
 重建所有视频的 title_normalized 和 title_pinyin
-backend 目录下运行: python scripts/rebuild_normalized.py
+运行: python scripts/rebuild_normalized.py
 """
 import sys
 sys.path.insert(0, '.')
@@ -18,8 +18,8 @@ for v in videos:
     v.title_normalized = normalize_title(v.title)
     v.title_pinyin = title_to_pinyin(v.title)
     if old_norm != v.title_normalized or old_pinyin != v.title_pinyin:
-        print(f"  #{v.id} {v.title[:40]:40s} norm: {old_norm[:20] or '(空)':20s} → {v.title_normalized[:20]}")
+        print(f"  #{v.id} {v.title[:40]:40s} norm: {old_norm[:20] or '(空)':20s} -> {v.title_normalized[:20]}")
 
 db.commit()
 db.close()
-print("✅ 完成")
+print("Done")
