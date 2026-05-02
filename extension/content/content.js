@@ -226,8 +226,8 @@ const POST_PROCESSORS = {
 
   removeSiteSuffix(v) {
     return String(v || '')
-      .replace(/\s*[-–—|｜_]\s*(B站|bilibili|YouTube|youtube|抖音|douyin|观看|在线).*$/i, '')
-      .replace(/\s*[-–—|｜_].*$/, '')
+      .replace(/\s*[-–—|｜_]\s*(B站|bilibili|YouTube|youtube|抖音|douyin|观看|在线|Watch|HD|4K|1080p|720p)\s*$/i, '')
+      .replace(/\s*[-–—|｜_]\s*[a-z0-9.-]+\.[a-z]{2,}\s*$/i, '')  // 只删末尾英文域名
       .trim();
   },
 
