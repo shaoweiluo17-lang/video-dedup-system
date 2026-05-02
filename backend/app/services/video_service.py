@@ -90,8 +90,8 @@ def check_duplicate(
 
     logger = logging.getLogger(__name__)
     logger.info(
-        "check_duplicate title=%r normalized=%r pinyin=%r url=%r site=%r candidates=%d",
-        title, normalized, pinyin[:30] if pinyin else '', url, final_source_site, len(candidates),
+        "check_duplicate title=%r normalized=%r pinyin=%r url=%r url_clean=%r url_base=%r site=%r candidates=%d",
+        title, normalized, pinyin[:30] if pinyin else '', url, url_clean, url_base, final_source_site, len(candidates),
     )
 
     # 同站候选用作强匹配优先排序
@@ -111,11 +111,12 @@ def check_duplicate(
         size_diff_pct = abs(v_size - target_size) / target_size if target_size > 0 else 0
 
         # URL 匹配（严格 > 去尾斜杠 > 去参数）
+        v_url = (v.url or '').rstrip('/')
         if url and v.url and v.url == url:
             strong_matches.append(_to_check_item(v, 1.0))
-        elif url_clean and v.url and v.url.rstrip('/') == url_clean:
+        elif url_clean and v.url and v_url == url_clean:
             strong_matches.append(_to_check_item(v, 0.99))
-        elif url_base and v.url and v.url.rstrip('/').startswith(url_base):
+        elif url_base and v.url and v_url.startswith(url_base):
             strong_matches.append(_to_check_item(v, 0.98))
         # 标题前缀匹配 + 同长 = 文件名编号后缀变体 (score 0.98)
         elif dur_diff <= 3 and title and (
