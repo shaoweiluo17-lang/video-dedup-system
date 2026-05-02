@@ -71,10 +71,19 @@ def check_duplicate(
         or_(
             Video.title_normalized == normalized,
             Video.title_pinyin == pinyin,
-            Video.title.like(f"%{title}%"),
+            # 双向模糊：A 包含 B 或 B 包含 A
+            Video.title.like(f"%{title}%") if title else False,
+            Video.title.contains(title) if title else False,
+            Video.title.in_([title]) if title else False,  # 完全相等
             Video.url == url if url else False,
         )
-    ).limit(30).all()
+    ).limit(50).all()
+
+    logger = logging.getLogger(__name__)
+    logger.info(
+        "check_duplicate title=%r normalized=%r pinyin=%r url=%r site=%r candidates=%d",
+        title, normalized, pinyin[:30] if pinyin else '', url, final_source_site, len(candidates),
+    )
 
     # 同站候选用作强匹配优先排序
     if final_source_site:
@@ -99,7 +108,7 @@ def check_duplicate(
             strong_matches.append(_to_check_item(v, 0.98))
         elif v.title_pinyin == pinyin and dur_diff <= 5 and size_diff_pct <= 0.05:
             medium_matches.append(_to_check_item(v, 0.85))
-        elif title and title in (v.title or ''):
+        elif title and (title in (v.title or '') or (v.title or '') in title):
             weak_matches.append(_to_check_item(v, 0.60))
 
     if strong_matches:
