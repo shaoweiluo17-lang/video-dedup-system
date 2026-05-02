@@ -88,9 +88,6 @@ def check_video_exists(
     db: Session = Depends(get_db),
 ):
     redis_client = get_redis_client()
-    import logging
-    log = logging.getLogger(__name__)
-    log.info("check url=%r title=%r dur=%d site=%r", url, title, duration_secs, source_site)
     return check_duplicate(db, redis_client, title, url, duration_secs, size_mb, source_site)
 
 
