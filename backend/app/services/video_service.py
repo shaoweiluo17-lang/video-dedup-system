@@ -262,6 +262,12 @@ def update_video(db: Session, video_id: int, payload) -> Optional[Video]:
                 setattr(video, 'title_normalized', normalize_title(value))
             setattr(video, key, value)
 
+    # 兜底：如果拼音/归一化仍为空，根据当前标题重建
+    if not video.title_pinyin:
+        video.title_pinyin = title_to_pinyin(video.title)
+    if not video.title_normalized:
+        video.title_normalized = normalize_title(video.title)
+
     # 如果传了 preview_url 且还没有 preview_path，下载预览图
     if update_data.get('preview_url') and not video.preview_path:
         preview_path = _download_preview(update_data['preview_url'], video.id)
