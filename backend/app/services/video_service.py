@@ -71,8 +71,9 @@ def check_duplicate(
         or_(
             Video.title_normalized == normalized,
             Video.title_pinyin == pinyin,
-            # 双向模糊：A 包含 B 或 B 包含 A
+            # 双向模糊：A 包含 B 或 B 包含 A + 前缀匹配
             Video.title.like(f"%{title}%") if title else False,
+            Video.title.like(f"{title}%") if title else False,  # 标题前缀（编号后缀场景）
             Video.title.contains(title) if title else False,
             Video.title.in_([title]) if title else False,  # 完全相等
             Video.url == url if url else False,
@@ -104,6 +105,11 @@ def check_duplicate(
         # URL 完全相同 = 绝对重复 (score 1.0)
         if url and v.url and v.url == url:
             strong_matches.append(_to_check_item(v, 1.0))
+        # 标题前缀匹配 + 同长 = 文件名编号后缀变体 (score 0.98)
+        elif dur_diff <= 3 and title and (
+            (v.title or '').startswith(title) or title.startswith(v.title or '')
+        ):
+            strong_matches.append(_to_check_item(v, 0.98))
         elif v.title_normalized == normalized and dur_diff <= 3:
             strong_matches.append(_to_check_item(v, 0.98))
         elif v.title_pinyin == pinyin and dur_diff <= 5 and size_diff_pct <= 0.05:

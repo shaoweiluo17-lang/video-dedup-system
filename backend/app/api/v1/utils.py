@@ -67,8 +67,9 @@ async def scan_dir(path: str = Query(..., description='目录的绝对路径')):
         if f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS:
             stat = f.stat()
             dur_secs, dur_str = _ffprobe_duration(str(f))
-            # 从文件名提取标题（去掉扩展名和常见下载标记）
-            title = re.sub(r'\s*[\[\(]?(?:720p|1080p|HD|4K|下载|在线)[\]\)]?\s*', '', f.stem).strip()
+            # 从文件名提取标题（去掉扩展名、编号后缀和常见标记）
+            title = re.sub(r'\s*[\[\(]?(?:720p|1080p|HD|4K|下载|在线)[\]\)]?\s*', '', f.stem)
+            title = re.sub(r'[\s_]*[\[\(]?\d+[\]\)]?$', '', title).strip()  # 去末尾 _1 _2 (1) (2)
             files.append({
                 'filename': f.name,
                 'title': title,
