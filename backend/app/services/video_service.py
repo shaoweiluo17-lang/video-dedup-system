@@ -53,6 +53,8 @@ def check_duplicate(
     size_mb: Decimal = Decimal('0'),
     source_site: str = '',
 ) -> VideoCheckResponse:
+    # 归一化空白：全角/半角空格合并为单空格（否则 LIKE 配不上）
+    title = ' '.join((title or '').split())
     normalized = normalize_title(title)
     pinyin = title_to_pinyin(title)
     final_source_site = source_site or ''
