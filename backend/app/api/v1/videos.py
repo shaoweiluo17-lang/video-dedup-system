@@ -87,8 +87,7 @@ def check_video_exists(
     url: str = Query(default=''),
     db: Session = Depends(get_db),
 ):
-    redis_client = get_redis_client()
-    return check_duplicate(db, redis_client, title, url, duration_secs, size_mb, source_site)
+    return check_duplicate(db, title, url, duration_secs, size_mb, source_site)
 
 
 @router.post('', response_model=VideoOut)
@@ -168,7 +167,6 @@ def update_video(video_id: int, payload: VideoUpdateRequest, db: Session = Depen
     if not video:
         raise HTTPException(status_code=404, detail='Video not found')
     get_redis_client().delete('video:stats')
-    get_redis_client().delete(f'video:check:*')
     return VideoOut.model_validate(video)
 
 
