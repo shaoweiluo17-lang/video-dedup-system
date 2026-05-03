@@ -97,8 +97,9 @@ def check_duplicate(
 
     logger = logging.getLogger(__name__)
     logger.info(
-        "check_duplicate title=%r normalized=%r pinyin=%r url=%r url_clean=%r url_base=%r site=%r candidates=%d",
-        title, normalized, pinyin[:30] if pinyin else '', url, url_clean, url_base, final_source_site, len(candidates),
+        "check_duplicate title=%r normalized=%r pinyin=%r url=%r url_clean=%r url_base=%r site=%r url_cand=%d title_cand=%d total=%d",
+        title, normalized, pinyin[:30] if pinyin else '', url, url_clean, url_base, final_source_site,
+        len(url_candidates), len(title_candidates), len(candidates),
     )
 
     # 同站候选用作强匹配优先排序

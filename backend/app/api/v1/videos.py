@@ -87,7 +87,11 @@ def check_video_exists(
     url: str = Query(default=''),
     db: Session = Depends(get_db),
 ):
-    return check_duplicate(db, title, url, duration_secs, size_mb, source_site)
+    import logging
+    logging.getLogger(__name__).info("check url=%r title=%r dur=%d", url, title, duration_secs)
+    result = check_duplicate(db, title, url, duration_secs, size_mb, source_site)
+    logging.getLogger(__name__).info("check result exists=%s level=%s matches=%d", result.exists, result.level, len(result.matches or []))
+    return result
 
 
 @router.post('', response_model=VideoOut)
