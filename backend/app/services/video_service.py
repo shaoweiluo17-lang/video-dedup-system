@@ -71,7 +71,7 @@ def check_duplicate(
     if url_base:
         url_conditions.append(Video.url.like(f"{url_base}%"))
 
-    url_candidates = query.filter(or_(*url_conditions)).all() if url_conditions else []
+    url_candidates = query.filter(or_(*url_conditions)).limit(200).all() if url_conditions else []
 
     title_conditions = []
     if normalized:
@@ -86,14 +86,16 @@ def check_duplicate(
 
     title_candidates = query.filter(or_(*title_conditions)).limit(50).all() if title_conditions else []
 
-    # 合并去重，URL 匹配的排前面
+    # 合并去重，URL 匹配的排前面，不设上限
     seen_ids = set()
     candidates = []
-    for v in url_candidates + title_candidates:
+    for v in url_candidates:
+        seen_ids.add(v.id)
+        candidates.append(v)
+    for v in title_candidates:
         if v.id not in seen_ids:
             seen_ids.add(v.id)
             candidates.append(v)
-    candidates = candidates[:50]
 
     logger = logging.getLogger(__name__)
     logger.info(
