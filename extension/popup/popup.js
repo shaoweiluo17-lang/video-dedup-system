@@ -155,11 +155,13 @@ async function handleCheck() {
     renderResult(result);
 
     if (result.exists) {
-      if (result.level === 'strong') {
-        setStatus('🔴 强匹配 — 高度疑似重复');
+      // 只有 URL 完全一致 (score ≥ 0.99) 才禁止入库
+      const hasUrlMatch = (result.matches || []).some(m => m.score >= 0.99);
+      if (hasUrlMatch) {
+        setStatus('🔴 URL 完全一致 — 已存在');
         els.btnAdd.classList.add('hidden');
       } else {
-        setStatus(`⚠ ${result.level === 'medium' ? '中' : '弱'}匹配 — 可能不重复`);
+        setStatus(`⚠ ${levelLabel[result.level] || result.level}匹配 — 可能不重复`);
         els.btnAdd.classList.remove('hidden');
       }
     } else {
