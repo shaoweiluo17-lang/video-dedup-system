@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from datetime import datetime
@@ -8,7 +7,6 @@ from typing import Optional
 from urllib.parse import urlparse
 
 import requests
-from redis import Redis
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -21,7 +19,7 @@ from app.schemas.video import (
     CheckResponseItem,
     VideoCheckResponse,
 )
-from app.utils.text import normalize_title, title_to_pinyin, parse_source_site, hash_text
+from app.utils.text import normalize_title, title_to_pinyin, parse_source_site
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +44,6 @@ def _to_check_item(video: Video, score: float) -> CheckResponseItem:
 
 def check_duplicate(
     db: Session,
-    redis_client: Redis,
     title: str,
     url: str = '',
     duration_secs: int = 0,
@@ -58,13 +55,6 @@ def check_duplicate(
     normalized = normalize_title(title)
     pinyin = title_to_pinyin(title)
     final_source_site = source_site or ''
-
-    cache_key_raw = f"{normalized}|{url}|{duration_secs}|{size_mb}|{final_source_site}"
-    cache_key = f"video:check:{hash_text(cache_key_raw)}"
-    cached = redis_client.get(cache_key)
-    if cached:
-        data = json.loads(cached)
-        return VideoCheckResponse(**data)
 
     # URL 去尾斜杠 + 去查询参数，用于候选查询
     url_clean = url.rstrip('/') if url else ''
@@ -158,7 +148,6 @@ def check_duplicate(
         # 不缓存"无重复"结果，避免添加后缓存未失效导致重复添加
         return result
 
-    redis_client.setex(cache_key, settings.CHECK_CACHE_TTL_SECONDS, result.model_dump_json())
     return result
 
 
