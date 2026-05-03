@@ -161,7 +161,7 @@ async function handleCheck() {
         setStatus('🔴 URL 完全一致 — 已存在');
         els.btnAdd.classList.add('hidden');
       } else {
-        setStatus(`⚠ ${levelLabel[result.level] || result.level}匹配 — 可能不重复`);
+        setStatus(`⚠ ${({strong:'强',medium:'中',weak:'弱'})[result.level] || result.level}匹配 — 可能不重复`);
         els.btnAdd.classList.remove('hidden');
       }
     } else {
