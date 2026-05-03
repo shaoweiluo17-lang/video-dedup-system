@@ -140,12 +140,15 @@ def check_duplicate(
         elif title and (title in (v.title or '') or (v.title or '') in title):
             weak_matches.append(_to_check_item(v, 0.60))
 
+    all_matches = strong_matches + medium_matches + weak_matches
+    all_matches.sort(key=lambda m: m.score, reverse=True)
+    
     if strong_matches:
-        result = VideoCheckResponse(exists=True, level='strong', matches=strong_matches)
+        result = VideoCheckResponse(exists=True, level='strong', matches=all_matches)
     elif medium_matches:
-        result = VideoCheckResponse(exists=True, level='medium', matches=medium_matches)
+        result = VideoCheckResponse(exists=True, level='medium', matches=all_matches)
     elif weak_matches:
-        result = VideoCheckResponse(exists=True, level='weak', matches=weak_matches)
+        result = VideoCheckResponse(exists=True, level='weak', matches=all_matches)
     else:
         result = VideoCheckResponse(exists=False, level='none', matches=[])
         # 不缓存"无重复"结果，避免添加后缓存未失效导致重复添加
