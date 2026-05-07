@@ -1,0 +1,488 @@
+openapi: "3.0.3"
+info:
+  title: 视频去重下载系统 API
+  version: "1.0.0"
+  description: |
+    视频去重下载系统（Video Dedup Download System）REST API 规范。
+
+    **鉴权**: 除 `/health` 外，所有业务接口需 Header `X-API-Key: <API_KEY>`。
+servers:
+  - url: http://localhost:18080
+    description: 本地开发环境
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Common]
+      summary: 健康检查
+      security: []
+      responses:
+        "200":
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/v1/videos/search:
+    get:
+      tags: [Videos]
+      summary: 视频模糊搜索
+      parameters:
+        - name: query
+          in: query
+          schema: { type: string, default: "" }
+          description: 搜索关键词（title / pinyin / normalized / url）
+        - name: page
+          in: query
+          schema: { type: integer, default: 1, minimum: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        "200":
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoListResponse"
+
+  /api/v1/videos/check:
+    get:
+      tags: [Videos]
+      summary: 去重检查
+      description: |
+        检查视频是否已存在。多级匹配：URL > 标准化标题 > 拼音+时长+大小 > 模糊。
+      parameters:
+        - name: title
+          in: query
+          required: true
+          schema: { type: string }
+        - name: url
+          in: query
+          schema: { type: string, default: "" }
+        - name: duration_secs
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size_mb
+          in: query
+          schema: { type: number, default: 0 }
+        - name: source_site
+          in: query
+          schema: { type: string, default: "" }
+      responses:
+        "200":
+          description: 去重结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoCheckResponse"
+
+  /api/v1/videos:
+    post:
+      tags: [Videos]
+      summary: 新增视频记录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoCreateRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoOut"
+    get:
+      tags: [Videos]
+      summary: 视频全量列表
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1, minimum: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, default: 100, minimum: 1, maximum: 1000 }
+      responses:
+        "200":
+          description: 视频列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoListResponse"
+
+  /api/v1/videos/{id}:
+    get:
+      tags: [Videos]
+      summary: 获取视频详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: 视频详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoOut"
+    put:
+      tags: [Videos]
+      summary: 更新视频字段
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoUpdateRequest"
+      responses:
+        "200":
+          description: 更新后的记录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoOut"
+    delete:
+      tags: [Videos]
+      summary: 软删除视频
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: 删除成功
+
+  /api/v1/videos/{id}/screenshot:
+    put:
+      tags: [Videos]
+      summary: 手动更新视频截图路径
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoUpdateScreenshotRequest"
+      responses:
+        "200":
+          description: 更新后的记录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoOut"
+
+  /api/v1/videos/stats:
+    get:
+      tags: [Videos]
+      summary: 视频统计
+      description: 返回总量/总大小/总时长/待截图数。有 Redis 缓存（TTL=1h），写入后主动清除。
+      responses:
+        "200":
+          description: 统计结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoStatsResponse"
+
+  /api/v1/videos/import:
+    post:
+      tags: [Videos]
+      summary: 批量导入视频
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoImportRequest"
+      responses:
+        "200":
+          description: 导入统计
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoImportResponse"
+
+  /api/v1/videos/screenshot/pending:
+    get:
+      tags: [Screenshot]
+      summary: 查询待截图列表
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 200 }
+      responses:
+        "200":
+          description: 待截图视频列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoListResponse"
+
+  /api/v1/videos/screenshot/process:
+    post:
+      tags: [Screenshot]
+      summary: 处理截图任务
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScreenshotTaskRequest"
+      responses:
+        "200":
+          description: 任务执行结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScreenshotTaskResponse"
+
+  /api/v1/videos/scan-local:
+    post:
+      tags: [Scanner]
+      summary: 扫描本地目录批量入库
+      description: |
+        递归扫描本地视频目录，自动提取标题/时长/大小，去重后入库。
+        默认为内存安全模式（不返回 items 列表）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScanLocalRequest"
+      responses:
+        "200":
+          description: 扫描结果汇总
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanLocalResponse"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+
+    # ── Check ──
+    CheckResponseItem:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        duration_secs: { type: integer }
+        size_mb: { type: number }
+        download_path: { type: string }
+        preview_path: { type: string }
+        screenshot_path: { type: string }
+        source_site: { type: string }
+        score: { type: number }
+
+    VideoCheckResponse:
+      type: object
+      properties:
+        exists: { type: boolean }
+        level:
+          type: string
+          enum: [strong, medium, weak, none]
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckResponseItem"
+
+    # ── CRUD ──
+    VideoCreateRequest:
+      type: object
+      required: [url, title]
+      properties:
+        url: { type: string }
+        title: { type: string }
+        size_mb: { type: number, default: 0 }
+        duration_secs: { type: integer, default: 0 }
+        duration_str: { type: string, default: "" }
+        category: { type: string, default: "" }
+        source_site: { type: string, default: "" }
+        download_date: { type: string, format: date-time, nullable: true }
+        download_path: { type: string, default: "" }
+        preview_url: { type: string, default: "" }
+
+    VideoUpdateRequest:
+      type: object
+      properties:
+        url: { type: string }
+        title: { type: string }
+        size_mb: { type: number }
+        duration_secs: { type: integer }
+        duration_str: { type: string }
+        category: { type: string }
+        source_site: { type: string }
+        download_path: { type: string }
+        preview_url: { type: string }
+      description: "仅需传要更新的字段，未传的字段保持不变"
+
+    VideoUpdateScreenshotRequest:
+      type: object
+      required: [screenshot_path]
+      properties:
+        screenshot_path: { type: string }
+
+    VideoOut:
+      type: object
+      properties:
+        id: { type: integer }
+        url: { type: string }
+        title: { type: string }
+        title_pinyin: { type: string }
+        title_normalized: { type: string }
+        size_mb: { type: number }
+        duration_secs: { type: integer }
+        duration_str: { type: string }
+        category: { type: string }
+        source_site: { type: string }
+        download_date: { type: string, format: date-time, nullable: true }
+        download_path: { type: string }
+        preview_path: { type: string }
+        screenshot_path: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    VideoListResponse:
+      type: object
+      properties:
+        total: { type: integer }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoOut"
+
+    # ── Stats ──
+    VideoStatsResponse:
+      type: object
+      properties:
+        total_videos: { type: integer }
+        total_size_mb: { type: number }
+        total_duration_secs: { type: integer }
+        pending_screenshot: { type: integer }
+
+    # ── Import ──
+    VideoImportItem:
+      type: object
+      required: [url, title]
+      properties:
+        url: { type: string }
+        title: { type: string }
+        size_mb: { type: number, default: 0 }
+        duration_secs: { type: integer, default: 0 }
+        duration_str: { type: string, default: "" }
+        category: { type: string, default: "" }
+        source_site: { type: string, default: "" }
+        download_date: { type: string, format: date-time, nullable: true }
+        download_path: { type: string, default: "" }
+        preview_url: { type: string, default: "" }
+
+    VideoImportRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoImportItem"
+
+    VideoImportResponse:
+      type: object
+      properties:
+        success_count: { type: integer }
+        duplicate_count: { type: integer }
+        fail_count: { type: integer }
+
+    # ── Screenshot ──
+    ScreenshotTaskRequest:
+      type: object
+      properties:
+        limit: { type: integer, default: 20 }
+
+    ScreenshotTaskResponse:
+      type: object
+      properties:
+        processed: { type: integer }
+        success: { type: integer }
+        failed: { type: integer }
+
+    # ── Scanner ──
+    ScanLocalRequest:
+      type: object
+      required: [directory]
+      properties:
+        directory:
+          type: string
+          description: 本地视频目录绝对路径
+        extensions:
+          type: array
+          items: { type: string }
+          default: [".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm"]
+        max_files:
+          type: integer
+          default: 500
+        generate_screenshot:
+          type: boolean
+          default: true
+        dedup_by_path:
+          type: boolean
+          default: true
+        return_items:
+          type: boolean
+          default: false
+          description: 是否返回详细条目列表（大批量时设为 false 防 OOM）
+
+    ScanLocalResultItem:
+      type: object
+      properties:
+        file_path: { type: string }
+        title: { type: string }
+        size_mb: { type: number }
+        duration_secs: { type: integer }
+        duration_str: { type: string }
+        download_date: { type: string, format: date-time, nullable: true }
+        status:
+          type: string
+          enum: [new, skipped_duplicate, skipped_not_video, error]
+        error: { type: string }
+
+    ScanLocalResponse:
+      type: object
+      properties:
+        total_found: { type: integer }
+        total_new: { type: integer }
+        total_skipped_duplicate: { type: integer }
+        total_skipped_not_video: { type: integer }
+        total_error: { type: integer }
+        total_oversized: { type: integer }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScanLocalResultItem"

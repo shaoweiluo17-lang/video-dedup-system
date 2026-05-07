@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>视频去重检查器 — 设置</title>
+  <style>
+    body { width: 360px; padding: 16px; font-family: sans-serif; font-size: 14px; }
+    h2 { margin-top: 0; font-size: 16px; }
+    label { display: block; margin-bottom: 6px; color: #555; }
+    textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    button { margin-top: 10px; padding: 6px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #40a9ff; }
+    #status { margin-top: 8px; font-size: 13px; color: #52c41a; }
+    .hint { font-size: 12px; color: #999; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h2>视频去重检查器 — 设置</h2>
+  <label for="sites">允许显示的站点（每行一个域名）</label>
+  <textarea id="sites" rows="6" placeholder="thisvid.com&#10;spankbang.com"></textarea>
+  <div class="hint">只有在这里配置的站点，页面内才会显示「已存在」/「未收录」标签。<br>工具栏徽章不受此限制。</div>
+  <button id="save">保存</button>
+  <p id="status"></p>
+
+  <script src="options.js"></script>
+</body>
+</html>

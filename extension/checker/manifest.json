@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "视频去重检查器",
+  "version": "1.0.0",
+  "description": "已收录自动显示「已存在」标签 + 工具栏红底「存」；未收录显示「未收录」绿标签 + 绿底「新」。",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:18080/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_title": "视频去重检查器"
+  }
+}
