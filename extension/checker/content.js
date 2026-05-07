@@ -126,8 +126,12 @@ window.addEventListener('beforeunload', removeTag);
 async function handleScan() {
   if (!__scanTarget) __scanTarget = document.body;
 
-  // 找目标容器：最近的 div.thumbs-items，没有则 fallback 到右键元素
-  const container = __scanTarget.closest('div.thumbs-items') || __scanTarget;
+  // 只在 div.thumbs-items 内生效
+  const container = __scanTarget.closest('div.thumbs-items');
+  if (!container) {
+    console.debug('[vds-checker] 右键目标不在 div.thumbs-items 内，跳过扫描');
+    return;
+  }
 
   // 提取所有 <a> 链接
   const links = container.querySelectorAll('a[href^="http"]');
