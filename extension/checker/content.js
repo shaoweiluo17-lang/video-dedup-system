@@ -61,6 +61,7 @@ function showTag(text, color) {
     position: fixed;
     top: 12px;
     right: 12px;
+    left: auto;
     z-index: 999999;
     padding: 4px 10px;
     border-radius: 4px;
