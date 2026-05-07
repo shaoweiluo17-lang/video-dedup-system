@@ -1,18 +1,21 @@
 // video-dedup-checker — background.js
-// 监听标签页事件 → 调 public lookup（无需 API Key）→ 设 Badge → 通知 content
+// 1) 标签页监听 → 调 lookup → 设 Badge → 通知 content
+// 2) 右键菜单 → 批量扫描 → 转发消息到 content
 
 const API_BASE = 'http://127.0.0.1:18080';
 const TIMEOUT_MS = 3000;
 const LOOKUP_URL = API_BASE + '/api/v1/public/lookup';
 
-// ── 标签页加载完成 ──
+// ════════════════════════════════════════════
+// 1) 页面自动查重（已有功能）
+// ════════════════════════════════════════════
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith('http')) {
     checkUrl(tabId, tab.url);
   }
 });
 
-// ── 标签页切换 ──
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   const tab = await chrome.tabs.get(activeInfo.tabId);
   if (tab.url && tab.url.startsWith('http')) {
@@ -20,7 +23,6 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   }
 });
 
-// ── 核心：查 URL 是否存在 ──
 async function checkUrl(tabId, url) {
   try {
     const controller = new AbortController();
@@ -35,7 +37,6 @@ async function checkUrl(tabId, url) {
 
     const data = await res.json();
 
-    // 设工具栏徽章
     if (data.exists) {
       chrome.action.setBadgeText({ text: '存', tabId });
       chrome.action.setBadgeBackgroundColor({ color: '#ff4d4f', tabId });
@@ -44,18 +45,37 @@ async function checkUrl(tabId, url) {
       chrome.action.setBadgeBackgroundColor({ color: '#52c41a', tabId });
     }
 
-    // 通知 content.js 显示页面标签
     chrome.tabs.sendMessage(tabId, {
       type: 'CHECK_RESULT',
       exists: data.exists,
       id: data.id,
-      title: data.title,
-    }).catch(() => { /* content 可能还没注入，忽略 */ });
+    }).catch(() => {});
   } catch (err) {
-    // API 不可达 → 清除 badge + 通知 content 隐藏标签
     chrome.action.setBadgeText({ text: '', tabId });
     chrome.tabs.sendMessage(tabId, { type: 'CHECK_RESULT', exists: null })
       .catch(() => {});
     console.debug('[vds-checker] lookup error:', err.message);
   }
 }
+
+// ════════════════════════════════════════════
+// 2) 右键菜单 — 批量扫描（新增功能）
+// ════════════════════════════════════════════
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'vds-scan-area',
+    title: '🔍 扫描此区域所有链接',
+    contexts: ['all'],
+  });
+  chrome.contextMenus.create({
+    id: 'vds-clear-annotations',
+    title: '🧹 清除此区域标注',
+    contexts: ['all'],
+  });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  const type = info.menuItemId === 'vds-scan-area' ? 'DO_SCAN' : 'CLEAR_SCAN';
+  chrome.tabs.sendMessage(tab.id, { type }).catch(() => {});
+});
