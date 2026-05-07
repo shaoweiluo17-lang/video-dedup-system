@@ -60,8 +60,8 @@ function showTag(text, color) {
   tag.style.cssText = `
     position: fixed;
     top: 12px;
-    right: 12px;
-    left: auto;
+    left: 12px;
+    right: auto;
     z-index: 999999;
     padding: 4px 10px;
     border-radius: 4px;
