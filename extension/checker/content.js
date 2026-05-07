@@ -24,7 +24,6 @@ const LOOKUP_BATCH_URL = API_BASE + '/api/v1/public/lookup-batch';
 // 状态
 // ════════════════════════════════════════════
 
-let __scanTarget = null;          // 最近右键的目标元素
 const urlCache = new Map();       // url → {exists, id}（页面级别缓存）
 
 // ════════════════════════════════════════════
@@ -39,14 +38,6 @@ function isWhitelisted(domains) {
   const cur = getDomain();
   return domains.some(d => cur === d || cur.endsWith('.' + d));
 }
-
-// ════════════════════════════════════════════
-// 1) 右键拦截 — 记录目标元素
-// ════════════════════════════════════════════
-
-document.addEventListener('contextmenu', (e) => {
-  __scanTarget = e.target;
-}, true);  // capture phase，优先执行
 
 // ════════════════════════════════════════════
 // 2) 消息分发
@@ -124,17 +115,18 @@ window.addEventListener('beforeunload', removeTag);
 // ════════════════════════════════════════════
 
 async function handleScan() {
-  if (!__scanTarget) __scanTarget = document.body;
-
-  // 只在 div.thumbs-items 内生效
-  const container = __scanTarget.closest('div.thumbs-items');
-  if (!container) {
-    console.debug('[vds-checker] 右键目标不在 div.thumbs-items 内，跳过扫描');
+  // 找页面上所有 div.thumbs-items
+  const containers = document.querySelectorAll('div.thumbs-items');
+  if (containers.length === 0) {
+    console.debug('[vds-checker] 页面没有 div.thumbs-items，跳过扫描');
     return;
   }
 
-  // 提取所有 <a> 链接
-  const links = container.querySelectorAll('a[href^="http"]');
+  // 从所有容器中提取 <a> 链接
+  const links = [];
+  containers.forEach(c => {
+    c.querySelectorAll('a[href^="http"]').forEach(a => links.push(a));
+  });
   const allUrls = Array.from(links).map(a => a.href);
   const uniqueUrls = [...new Set(allUrls)].filter(h => h.startsWith('http')).slice(0, 200);
 
